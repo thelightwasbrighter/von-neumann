@@ -5,6 +5,7 @@ import random
 import sys
 import time
 import importlib
+import copy
 #import numpy
 import pygame, pygame.locals
 sys.path.reverse()
@@ -13,12 +14,12 @@ sys.path.reverse()
 #print sys.path[len(sys.path)-1]
    
 
-UNIVERSE_WIDTH = 400
-UNIVERSE_HEIGHT = 300
-PLANETS = 50
+UNIVERSE_WIDTH = 600
+UNIVERSE_HEIGHT = 350
+PLANETS = 300
 SCALE = 2
 RES_MAX = 100
-
+CARGO_SLOTS = 10000
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -66,6 +67,25 @@ class Display(object):
         self.set_frame(self.draft_surface)
 
 
+# Actions available to an agent on each turn.
+ACT_BUILD, ACT_MOVE, ACT_EAT, ACT_RELEASE, ACT_ATTACK, ACT_LIFT, ACT_DROP = range(7)
+
+class Action(object):
+    '''
+    A class for passing an action around.
+    '''
+    def __init__(self, action_type, data=None):
+        self.type = action_type
+        self.data = data
+
+    def get_data(self):
+        return self.data
+
+    def get_type(self):
+        return self.type
+
+
+
 class Planet(object):
     def __init__(self, pos, ressource):
         self.pos=pos
@@ -102,8 +122,11 @@ class Probe(object):
     def __init__(self, pos, team, ai):
         self.pos = pos
         self.team = team
-        self.ai = ai
-
+        self.ai = ai()
+        self.landed=False
+        self.cargo={'ressources':[0,0,0]}
+        self.free_slots=CARGO_SLOTS
+        self.act = self.ai.act
     def get_team(self):
         return self.team
 
@@ -112,6 +135,22 @@ class Probe(object):
 
     def get_pos(self):
         return self.pos
+
+    def set_landed(self, landed):
+        self.landed=landed
+        
+    def get_landed(self):
+        return self.landed
+
+    def get_free_slots(self):
+        return self.free_slots
+
+    def get_cargo(self):
+        return self.cargo
+
+    def add_ressources(self, res):
+        for x in range(3):
+            self.cargo['ressources'][x]=self.cargo['ressources'][x]+res[x]
 
 
 class Team(object):
@@ -129,8 +168,18 @@ class Team(object):
     def get_id(self):
         return self.id_num
 
+class View(object):
+    def __init__(self, probe):
+        self.pos=copy.deepcopy(probe.get_pos())
+        self.cargo=copy.deepcopy(probe.get_cargo())
+        self.free_slots=copy.deepcopy(probe.get_free_slots())
+        self.team_id=copy.deepcopy(probe.get_team().get_id())
+        self.landed=copy.deepcopy(probe.get_landed())
+
 class Game(object):
     def __init__(self, ai_list):
+        self.rounds=0
+        self.ais= [ai[1].ProbeAi for ai in ai_list]
         #team colours
         self.team_colours=[]
         self.team_colours.append((255,0,0))
@@ -183,24 +232,45 @@ class Game(object):
         #create initial probes
         self.probe_list = []
         for x in range(0, len(ai_list)):
-            self.probe_list.append(Probe((0,0), self.team_list[x], ai_list[x]))
+            self.probe_list.append(Probe((0,0), self.team_list[x], self.ais[x]))
             self.planet_list[x].populate(self.probe_list[x])
             self.probe_list[x].set_pos(self.planet_list[x].get_pos())
+            self.probe_list[x].set_landed(True)
 
-        mydisplay = Display(UNIVERSE_WIDTH, UNIVERSE_HEIGHT, SCALE)
-        mydisplay.new_draft()
+        #generate display
+        self.mydisplay = Display(UNIVERSE_WIDTH, UNIVERSE_HEIGHT, SCALE)
+        self.mydisplay.new_draft()
+        self.draw_planets()
+        self.mydisplay.draw_draft()
+                
+    def tick(self):
+        self.rounds=self.rounds+1
+        print "round ", self.rounds
+        
+        #ressource mining
+        for p in self.planet_list:
+            if p.is_populated():
+                p.populating_probe().add_ressources(p.get_res())
+                
+        #create probe/view list
+        view_list=[]
+        for p in self.probe_list:
+            view_list.append((p, View(p)))
+        
+
+        #create action list
+        action_list = []
+        for (p,v) in view_list:
+            action_list.append((p, p.act(v)))
+        
+                
+    def draw_planets(self):
         for x in self.planet_list:
             if x.is_populated():
-                mydisplay.draw_planet(x.get_pos(), x.populating_probe().get_team().get_colour())
+                self.mydisplay.draw_planet(x.get_pos(), x.populating_probe().get_team().get_colour())
             else:
-                mydisplay.draw_planet(x.get_pos(), (255,255,255))
-        mydisplay.draw_draft()
-        while 1:
-            pass
-        
-for x in range(PLANETS):
-    pass
-
+                self.mydisplay.draw_planet(x.get_pos(), (255,255,255))
+       
             
 def get_ai(name):
     importlib.import_module(name)
@@ -225,4 +295,4 @@ main()
 mygame = Game(ai_list)
 
 while 1:
-    pass
+    mygame.tick()
