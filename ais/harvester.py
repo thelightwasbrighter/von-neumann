@@ -68,12 +68,12 @@ class ProbeAi(object):
         #get local maximum ressource
         local_planet_pos=None
         random.shuffle(view.messages)
+        ran=random.uniform(0,1)
         for planet in view.scans['planets']:
             if planet['sector']==view.sector and planet['team_id']==view.team_id:
                 local_planet_pos=planet['pos']
                 local_planet_have=self.max_res2(planet['res'])
-        if local_planet_pos==None:
-            print "no local planet found, chosing randomly"
+        if local_planet_pos==None or ran<0.3:
             local_planet_pos=view.messages[0]['pos']
             local_planet_have=view.messages[0]['have']
         receiver_pos=None
@@ -84,7 +84,7 @@ class ProbeAi(object):
                     receiver_pos=m['pos']
                     receiver_dist=self.betrag(self.distance(local_planet_pos,m['pos']))
         if receiver_pos==None:
-            print "no receiver found, selecting randomly"
+            #print "no receiver found, selecting randomly"
             receiver_pos=view.messages[1]['pos']
             
         return {'res':local_planet_have, 'sender_pos':local_planet_pos, 'receiver_pos':receiver_pos}
@@ -93,13 +93,12 @@ class ProbeAi(object):
     def act(self, view):
         if self.mission=='produce':
             if view.landed==False:
-                print "landing failed"
                 self.mission='search'
                 return {'action':von_neumann.Action(von_neumann.ACT_IDLE), 'message':None}
             
             message={'pos':view.pos, 'need':self.min_res(view), 'have':self.max_res(view)}
             x=random.uniform(0,1)
-            if x<0.5 or len(view.messages)<3:
+            if x<0.5 or len(view.messages)<4:
                 #produce searcher
                 return {'action':von_neumann.Action(von_neumann.ACT_BUILD_PROBE, 'search'), 'message':message}
             else:
@@ -133,7 +132,6 @@ class ProbeAi(object):
         elif self.mission=='transport':
             if self.submission==None:
                 if len(view.messages)<2:
-                    print "transporter waiting for secong colony"
                     return {'action':von_neumann.Action(von_neumann.ACT_IDLE), 'message':None}
                 self.transport_mission=self.get_transport_mission(view)
                 self.submission='goto_sender'
@@ -141,7 +139,6 @@ class ProbeAi(object):
                 return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.direction), 'message':None}
             elif self.submission=='goto_sender':
                 if view.sector==[int(math.floor(self.transport_mission['sender_pos'][0])),int(math.floor(self.transport_mission['sender_pos'][1]))]:
-                    print "arrived at sender_pos"
                     load_res=[0,0,0]
                     load_res[self.transport_mission['res']]=von_neumann.CARGO_SLOTS
                     self.submission='goto_receiver'
@@ -151,7 +148,7 @@ class ProbeAi(object):
                     return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.direction), 'message':None}
             elif self.submission=='goto_receiver':
                 if view.sector==[int(math.floor(self.transport_mission['receiver_pos'][0])),int(math.floor(self.transport_mission['receiver_pos'][1]))]:
-                    print "arrived at receiver_pos, mission complete"
+                    #print "arrived at receiver_pos, mission complete"
                     unload_res=[von_neumann.CARGO_SLOTS,von_neumann.CARGO_SLOTS,von_neumann.CARGO_SLOTS]
                     self.submission=None
                     return {'action':von_neumann.Action(von_neumann.ACT_UNLOAD, {'ressources':unload_res, 'guns':0, 'armor':0}), 'message':None}
