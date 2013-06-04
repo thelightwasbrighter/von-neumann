@@ -19,7 +19,7 @@ class ProbeAi(object):
 
     def act(self, view):
         if view.landed:
-            res=view.cargo['ressources']
+            res=view.cargo['resources']
             guns=view.cargo['guns']
             armor=view.cargo['armor']
             if guns<3:
@@ -43,7 +43,7 @@ class ProbeAi(object):
                 guns=view.cargo['guns']
                 armor=view.cargo['armor']
                 if guns<3 or armor<1:
-                    return {'action':von_neumann.Action(von_neumann.ACT_LOAD, {'ressources':(0,0,0), 'guns':3-guns, 'armor':1-armor}), 'message':None}
+                    return {'action':von_neumann.Action(von_neumann.ACT_LOAD, {'resources':(0,0,0), 'guns':3-guns, 'armor':1-armor}), 'message':None}
                 for probe in view.scans['probes']:
                     if probe['team_id']!=view.team_id:
                         if probe['sector']==view.sector:
@@ -57,7 +57,7 @@ class ProbeAi(object):
                     if p['pos']==view.sector and p['landed']:
                         if p['cargo']['guns']>0:
                             if view.free_slots>=von_neumann.GUN_SLOTS:
-                                return {'action':von_neumann.Action(von_neumann.ACT_LOAD, {'ressources':(0,0,0), 'guns':1, 'armor':0}), 'message':None}
+                                return {'action':von_neumann.Action(von_neumann.ACT_LOAD, {'resources':(0,0,0), 'guns':1, 'armor':0}), 'message':None}
                         
                 return {'action':von_neumann.Action(von_neumann.ACT_IDLE), 'message':None}
 

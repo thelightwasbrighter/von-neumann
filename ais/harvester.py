@@ -1,5 +1,5 @@
 '''
-This probe finds new planets, transports ressources and reproduces.
+This probe finds new planets, transports resources and reproduces.
 No fighting at all.
 '''
 
@@ -65,7 +65,7 @@ class ProbeAi(object):
         return math.sqrt(math.pow(vect[0],2)+math.pow(vect[1],2))
 
     def get_transport_mission(self, view):
-        #get local maximum ressource
+        #get local maximum resource
         local_planet_pos=None
         random.shuffle(view.messages)
         ran=random.uniform(0,1)
@@ -142,7 +142,7 @@ class ProbeAi(object):
                     load_res=[0,0,0]
                     load_res[self.transport_mission['res']]=von_neumann.CARGO_SLOTS
                     self.submission='goto_receiver'
-                    return {'action':von_neumann.Action(von_neumann.ACT_LOAD, {'ressources':load_res, 'guns':0, 'armor':0}), 'message':None}
+                    return {'action':von_neumann.Action(von_neumann.ACT_LOAD, {'resources':load_res, 'guns':0, 'armor':0}), 'message':None}
                 else:
                     self.direction=self.distance(view.pos,self.transport_mission['sender_pos'])
                     return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.direction), 'message':None}
@@ -151,7 +151,7 @@ class ProbeAi(object):
                     #print "arrived at receiver_pos, mission complete"
                     unload_res=[von_neumann.CARGO_SLOTS,von_neumann.CARGO_SLOTS,von_neumann.CARGO_SLOTS]
                     self.submission=None
-                    return {'action':von_neumann.Action(von_neumann.ACT_UNLOAD, {'ressources':unload_res, 'guns':0, 'armor':0}), 'message':None}
+                    return {'action':von_neumann.Action(von_neumann.ACT_UNLOAD, {'resources':unload_res, 'guns':0, 'armor':0}), 'message':None}
                 else:
                     self.direction=self.distance(view.pos,self.transport_mission['receiver_pos'])
                     return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.direction), 'message':None}

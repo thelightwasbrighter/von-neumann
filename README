@@ -1,0 +1,98 @@
+Requirements:
+	python2
+	pygame
+
+Usage:
+	./von-neumann [ai1] [ai2] ...
+
+Each player starts out with one probe on a planet. A landed probe automatically mines the resources of the planet and can use these to build objects, such as new probes, guns or armor. Once a probe has landed on a planet, it will stay there. It cannot launch back into space. There are three types of resource in this game. If you build items, each of these resources will be used to the same amount. All planets except for the homeworlds only provide two of the three resources. This means, that you have to transport resources between planets in order to use your resources effectively.
+
+The probes that are in space can move around freely, however there is a maximum velocity.
+The space is divided into a grid of sectors. The truncated coordinates of each probe represent its sector. Certain interactions, such as battle, loading and unloading of cargo can only take place if the participating probes are in the same sector.
+
+An instance of ProbeAi is created for each Probe.
+The first instance receives 'initial' as an argument.
+
+Each round the method act of ProbeAi is executed and an object of the class View is passed into it.
+
+View contains following information:
+  pos:
+    the current position of the probe in form of a list with two elements: [x,y]
+	    	    	
+  free_slots:
+    the number of free space available in the cargo space of the probe. This is only relevant for probes in space. Landed probes have no cargo space limitations
+  probe_id:
+    the id of the probe					
+  team_id:
+    the id of the team which the probe belongs to
+
+  landed:
+    True if the probe is on a planet. False if it's in space
+
+  sector:
+    The sector in which the probe currently is. This is a truncated version of pos and also comes as a list with two entries
+
+  scans:
+    The results of the scan which each probe automatically executes at the beginning of each round. It is a dictionary with the two entries 'planets' and 'probes'. The 'planets' entry contains a list of planet objects. The planet objects themselves are directories containing the following entries:
+      'pos': position of the planet
+      'sector': sector of the planet
+      'res': the ammount of resources that can be mined each round on the planet in form of a list with three entries
+      'populated': True if a probe has already landed on the planet
+      'team_id' if populated, the team_id of the probe on the planet
+    The 'probe' entry contains a list of probe objects. The probe objects themselves are directories containing the following entries:
+      'pos': position of the probe
+      'sector': sector of the probe
+      'landed': True if the probe has landed
+      'cargo': The cargo directory of the probe (see below for more information)
+      'team_id' probe's team_id
+      'probe_id' probe's probe_id
+
+  messages:
+    All messages that were sent by probes of the probes team last round in a list
+
+
+The act method has to return a directory with two entries: 'action' and 'message'. The 'action' entry has to contain an object of the Action type (see below). The 'message' entry can contain anything you'd like to broadcast to your teammembers.
+
+The Action conctructor has to receive one of the following keywords, defined in von-neumann module: ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_BUILD_ARMOR, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_ATTACK, ACT_IDLE. Some of these keywords require an additional argument, which you also have to pass to the Action constructor. The build actions can only be executed by landed probes. The colonize, load and unload actions only by not landed 
+
+ACT_BUILD_PROBE:
+  Build a new probe which is then spawned in the next round. If you don't have enough resources, nothing will happen. You can pass an additional argument to the Action constructor which will be passed to the constructor of the new probe, which can be very useful.
+ACT_BUILD_GUN:
+  Build a gun which will be spawned in the probes cargo room next round.
+ACT_BUILD_ARMOR:
+  Build an armor unit which will be spawned in the probes cargo room next round.
+
+ACT_LOAD/ACT_UNLOAD:
+  load/unload resources/guns/armor from/to the probe that is landed on the planet in the sector in which you currently are. If there is no such probe, nothing will happen. A cargo directory is required as an additional argument in order to tell the master program what items you want to load/unload. See below for the structure of a cargo directory.
+
+ACT_ATTACK:
+  attack another probe. The other probe has to be in the same sector for this to work. The additional parameter has to be the probe_id of the enemy probe, which can be acquired from the scans in the view object.
+
+ACT_MOVE:
+  move in a certain direction. This only works if the probe is in space. A two dimensional list(vector) has to be passed as an argument. It represents direction and speed as the same time. If the length exceeds the allowed maximum speed it will automatically be shortened to the maximum length.
+
+ACT_IDLE:
+  Do nothing
+
+
+The Cargo Directory:
+  The Cargo Directory is used for the load/unload actions and to read the contents of cargo rooms. It is a directory with the following entries: 'resources', 'guns', 'armor'. The resources entry contains a list with three elements for three types of resources that exist in this game. 'guns' and 'armor' contain integers.
+
+If you have guns in your cargo room it improves your chances of destroying an enemy you attack. If you have armor in your cargo room it improves your chances of surviving an attack.
+
+A probes cargoroom that is in space is limited to the constant CARGO_SLOTS. Once a probe has landed the cargo space is unlimited, however only a limited ammount of guns and armor will be used in a battle.
+
+The following constants define the game:
+UNIVERSE_WIDTH:   width of the universe
+UNIVERSE_HEIGHT:  height of the universe
+PLANETS:          number of planets 	  	
+RES_MAX:          maximum ammount that can be mined per round per resource.
+CARGO_SLOTS:      Cargo slots avalable to a probe. Each resource takes one cargo slot
+PROBE_COST:       Cost of a probe. Each resource will be used PROBE_COST times to build a single probe
+GUN_COST:	  Gun cost
+GUN_SLOTS:	  Number of cargo slots taken by a gun
+ARMOR_COST:	  Armor unit cost
+ARMOR_SLOTS:	  Number of cargo slots taken by an armor unit
+PROBE_RANGE:      Scanner range of a probe
+MAX_SPEED:        maximum distance that can be covered in one round
+

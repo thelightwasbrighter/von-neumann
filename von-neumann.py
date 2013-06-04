@@ -17,15 +17,15 @@ sys.path.reverse()
 
 UNIVERSE_WIDTH = 200
 UNIVERSE_HEIGHT = 200
-PLANETS = 200
-SCALE = 3
+PLANETS = 280
+SCALE = 4
 RES_MAX = 100
-CARGO_SLOTS = 1000
+CARGO_SLOTS = 10000
 PROBE_COST = 800
 GUN_COST = 250
-GUN_SLOTS = 250
+GUN_SLOTS = 2500
 ARMOR_COST = 250
-ARMOR_SLOTS = 250
+ARMOR_SLOTS = 2500
 PROBE_RANGE = 5
 PLANET_RANGE = 5
 MAX_SPEED=1
@@ -113,9 +113,9 @@ class Action(object):
 
 
 class Planet(object):
-    def __init__(self, pos, ressource):
+    def __init__(self, pos, resource):
         self.pos=pos
-        self.ressource=ressource
+        self.resource=resource
         self.populated=False
         self.probe=None
     def populate(self, probe):
@@ -132,16 +132,16 @@ class Planet(object):
         return [int(math.floor(self.pos[0])),int(math.floor(self.pos[1]))]
 
     def get_res(self):
-        return self.ressource
+        return self.resource
 
     def scanned(self):
         if self.populated:
-            return {'pos':self.pos, 'sector':self.get_sector(), 'res':self.ressource, 'populated':self.populated, 'team_id':self.probe.get_team().get_id()}
+            return {'pos':self.pos, 'sector':self.get_sector(), 'res':self.resource, 'populated':self.populated, 'team_id':self.probe.get_team().get_id()}
         else:
-            return {'pos':self.pos, 'sector':self.get_sector(), 'res':self.ressource, 'populated':self.populated, 'team_id':None}
+            return {'pos':self.pos, 'sector':self.get_sector(), 'res':self.resource, 'populated':self.populated, 'team_id':None}
             
     def set_res(self, res):
-        self.ressource=res
+        self.resource=res
 
     def is_populated(self):
         return self.populated
@@ -162,7 +162,7 @@ class Probe(object):
         self.team = team
         self.ai = ai(cargs)
         self.landed=False
-        self.cargo={'ressources':[0,0,0], 'guns':0, 'armor':0}
+        self.cargo={'resources':[0,0,0], 'guns':0, 'armor':0}
         self.free_slots=CARGO_SLOTS
         self.act = self.ai.act
         self.calc_sector()
@@ -207,19 +207,19 @@ class Probe(object):
         return self.sector
 
     def pay_probe(self):
-        res=self.cargo['ressources']
+        res=self.cargo['resources']
         res[0]-=PROBE_COST
         res[1]-=PROBE_COST
         res[2]-=PROBE_COST
     
     def pay_gun(self):
-        res=self.cargo['ressources']
+        res=self.cargo['resources']
         res[0]-=GUN_COST
         res[1]-=GUN_COST
         res[2]-=GUN_COST
     
     def pay_armor(self):
-        res=self.cargo['ressources']
+        res=self.cargo['resources']
         res[0]-=ARMOR_COST
         res[1]-=ARMOR_COST
         res[2]-=ARMOR_COST
@@ -234,7 +234,7 @@ class Probe(object):
     def get_free_slots(self):
         self.free_slots=CARGO_SLOTS
         for i in xrange(3):
-            self.free_slots-=self.cargo['ressources'][i]
+            self.free_slots-=self.cargo['resources'][i]
         self.free_slots-=GUN_SLOTS*self.cargo['guns']
         self.free_slots-=ARMOR_SLOTS*self.cargo['armor']
         return self.free_slots
@@ -242,9 +242,9 @@ class Probe(object):
     def get_cargo(self):
         return self.cargo
 
-    def add_ressources(self, res):
+    def add_resources(self, res):
         for x in xrange(3):
-            self.cargo['ressources'][x]=self.cargo['ressources'][x]+res[x]
+            self.cargo['resources'][x]=self.cargo['resources'][x]+res[x]
 
 
 class Team(object):
@@ -271,6 +271,7 @@ class View(object):
         self.landed=probe.get_landed()
         self.sector=[int(math.floor(self.pos[0])),int(math.floor(self.pos[1]))]
         self.scans = {'planets':[], 'probes':[]}
+        self.probe_id = probe.get_id()
         for x in xrange(-PROBE_RANGE,PROBE_RANGE):
             if self.sector[0]+x>0 and self.sector[0]+x<UNIVERSE_WIDTH:
                 for y in xrange(-PROBE_RANGE,PROBE_RANGE):
@@ -358,7 +359,7 @@ class Game(object):
             self.grid[xtemp][ytemp]['planets'].append(planet_temp)
             #print (planet_temp.get_pos(), planet_temp.get_res())
         
-        #set equal ressources for all homeworlds
+        #set equal resources for all homeworlds
         res_a = random.randint(10,RES_MAX)
         res_b = random.randint(10,RES_MAX)
         res_c = random.randint(10,RES_MAX)
@@ -394,11 +395,12 @@ class Game(object):
     def tick(self):
         self.rounds=self.rounds+1
         print "round ", self.rounds
-        
-        #ressource mining
+        #print len(self.probe_list)
+        #print sum(p.is_populated() for p in self.planet_list)
+        #resource mining
         for p in self.planet_list:
             if p.is_populated():
-                p.populating_probe().add_ressources(p.get_res())
+                p.populating_probe().add_resources(p.get_res())
                 
         #update networks
         #assign_networks(self.grid, self.probe_list)
@@ -462,7 +464,7 @@ class Game(object):
         #build new probes
         for (p,act) in action_list:
             if act.get_type()==ACT_BUILD_PROBE:
-                res=p.get_cargo()['ressources']
+                res=p.get_cargo()['resources']
                 if p.get_landed() and res[0]>=PROBE_COST and res[1]>=PROBE_COST and res[2]>=PROBE_COST:
                     temp_probe=Probe(copy.deepcopy(p.get_pos()), p.get_team(), p.get_team().get_ai()[1].ProbeAi, self.probe_id_counter, copy.deepcopy(act.get_data()))
                     self.probe_id_counter+=1
@@ -474,7 +476,7 @@ class Game(object):
         #build new guns
         for (p,act) in action_list:
             if act.get_type()==ACT_BUILD_GUN:
-                res=p.get_cargo()['ressources']
+                res=p.get_cargo()['resources']
                 if p.get_landed() and res[0]>=GUN_COST and res[1]>=GUN_COST and res[2]>=GUN_COST:
                     p.cargo['guns']+=1
                     #print self.grid
@@ -483,7 +485,7 @@ class Game(object):
         #build new armor
         for (p,act) in action_list:
             if act.get_type()==ACT_BUILD_ARMOR:
-                res=p.get_cargo()['ressources']
+                res=p.get_cargo()['resources']
                 if p.get_landed() and res[0]>=ARMOR_COST and res[1]>=ARMOR_COST and res[2]>=ARMOR_COST:
                     p.cargo['armor']+=1
                     #print self.grid
@@ -497,10 +499,10 @@ class Game(object):
                     if self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].is_populated():
                         landed_probe=self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].populating_probe()
                         if landed_probe.get_team()==p.get_team():
-                            #ressources
-                            wanted_res=cargo['ressources']
-                            probe_res=p.get_cargo()['ressources']
-                            station_res=landed_probe.get_cargo()['ressources']
+                            #resources
+                            wanted_res=cargo['resources']
+                            probe_res=p.get_cargo()['resources']
+                            station_res=landed_probe.get_cargo()['resources']
                             free_slots=p.get_free_slots()
                             for i in xrange(3):
                                 if wanted_res[i]<=station_res[i]:
@@ -574,10 +576,10 @@ class Game(object):
                     if self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].is_populated():
                         landed_probe=self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].populating_probe()
                         if landed_probe.get_team()==p.get_team():
-                            #ressources
-                            dump_res=cargo['ressources']
-                            probe_res=p.get_cargo()['ressources']
-                            station_res=landed_probe.get_cargo()['ressources']
+                            #resources
+                            dump_res=cargo['resources']
+                            probe_res=p.get_cargo()['resources']
+                            station_res=landed_probe.get_cargo()['resources']
                             for i in xrange(3):
                                 if dump_res[i]<=probe_res[i]:
                                     probe_res[i]-=dump_res[i]
