@@ -99,7 +99,7 @@ class ProbeAi(object):
             
             message={'pos':view.pos, 'need':self.min_res(view), 'have':self.max_res(view)}
             x=random.uniform(0,1)
-            if x<0.3:
+            if x<0.5 or len(view.messages)<3:
                 #produce searcher
                 return {'action':von_neumann.Action(von_neumann.ACT_BUILD_PROBE, 'search'), 'message':message}
             else:

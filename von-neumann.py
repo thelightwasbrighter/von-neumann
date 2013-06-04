@@ -15,20 +15,20 @@ sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 500
-UNIVERSE_HEIGHT = 300
-PLANETS = 300
-SCALE = 2
+UNIVERSE_WIDTH = 200
+UNIVERSE_HEIGHT = 200
+PLANETS = 200
+SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 1000
-PROBE_COST = 1000
+PROBE_COST = 800
 GUN_COST = 250
 GUN_SLOTS = 250
 ARMOR_COST = 250
 ARMOR_SLOTS = 250
-PROBE_RANGE = 10
+PROBE_RANGE = 5
 PLANET_RANGE = 5
-MAX_SPEED=0.4
+MAX_SPEED=1
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -417,13 +417,11 @@ class Game(object):
             action_list.append((p, reaction['action']))
             if reaction['message']!=None:
                 message_list.append((p, reaction['message']))
-        
         #sort messages
-        for m in self.message_queues:
-            m=[]
+        for i in xrange(len(self.message_queues)):
+            self.message_queues[i]=[]
         for (p,m) in message_list:
             self.message_queues[p.get_team().get_id()].append(m)
-    
                 
         #fight
         death_list=[]
