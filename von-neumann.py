@@ -11,18 +11,19 @@ import copy
 import pygame, pygame.locals
 sys.path.reverse()
 sys.path.append(sys.path[len(sys.path)-1]+'/ais')
+sys.path.append('/home/peter/Documents/C++/von-neumann/ais')
 sys.path.reverse()
-#print sys.path[len(sys.path)-1]
+
    
 
-UNIVERSE_WIDTH = 360
+UNIVERSE_WIDTH = 300
 UNIVERSE_HEIGHT = 200
-PLANETS = 300
-SCALE = 3
+PLANETS = 30
+SCALE = 2
 RES_MAX = 100
-CARGO_SLOTS = 10000
+CARGO_SLOTS = 1000
 PROBE_COST = 1000
-PROBE_RANGE = 40
+PROBE_RANGE = 3
 PLANET_RANGE = 5
 
 
@@ -191,7 +192,7 @@ def assign_networks(grid, probe_list):
 
 class Probe(object):
     def calc_sector(self):
-        self.sector=(int(math.floor(self.pos[0])), int(math.floor(self.pos[1])))
+        self.sector=[int(math.floor(self.pos[0])), int(math.floor(self.pos[1]))]
     
     def __init__(self, pos, team, ai, cargs):
         self.pos = pos
@@ -213,7 +214,7 @@ class Probe(object):
         self.network_id = net_id
 
     def scanned(self):
-        return {'pos':self.pos, 'cargo':self.cargo, 'team_id':self.team.get_id()}
+        return {'pos':self.pos, 'landed':self.landed, 'cargo':self.cargo, 'team_id':self.team.get_id()}
 
     def get_ai(self):
         return self.ai
@@ -249,6 +250,9 @@ class Probe(object):
         return self.landed
 
     def get_free_slots(self):
+        self.free_slots=CARGO_SLOTS
+        for i in xrange(3):
+            self.free_slots-=self.cargo['ressources'][i]
         return self.free_slots
 
     def get_cargo(self):
@@ -276,22 +280,22 @@ class Team(object):
 
 class View(object):
     def __init__(self, probe, grid, message_queues):
-        self.pos=copy.deepcopy(probe.get_pos())
-        self.cargo=copy.deepcopy(probe.get_cargo())
-        self.free_slots=copy.deepcopy(probe.get_free_slots())
-        self.team_id=copy.deepcopy(probe.get_team().get_id())
-        self.landed=copy.deepcopy(probe.get_landed())
-        self.sector=(int(math.floor(self.pos[0])),int(math.floor(self.pos[1])))
+        self.pos=probe.get_pos()
+        self.cargo=probe.get_cargo()
+        self.free_slots=probe.get_free_slots()
+        self.team_id=probe.get_team().get_id()
+        self.landed=probe.get_landed()
+        self.sector=[int(math.floor(self.pos[0])),int(math.floor(self.pos[1]))]
         self.scans = {'planets':[], 'probes':[]}
         for x in xrange(-PROBE_RANGE,PROBE_RANGE):
             if self.sector[0]+x>0 and self.sector[0]+x<UNIVERSE_WIDTH:
                 for y in xrange(-PROBE_RANGE,PROBE_RANGE):
                     if self.sector[1]+y>0 and self.sector[1]+y<UNIVERSE_HEIGHT:
                         for planet in grid[self.sector[0]+x][self.sector[1]+y]['planets']:
-                            self.scans['planets'].append(copy.deepcopy(planet.scanned()))
+                            self.scans['planets'].append(planet.scanned())
                         for probe in grid[self.sector[0]+x][self.sector[1]+y]['probes']:
-                            self.scans['probes'].append(copy.deepcopy(probe.scanned()))
-        self.messages=copy.deepcopy(message_queues[probe.get_team().get_id()])
+                            self.scans['probes'].append(probe.scanned())
+        self.messages=message_queues[probe.get_team().get_id()]
 
 class Game(object):
     def __init__(self, ai_list):
@@ -354,7 +358,7 @@ class Game(object):
         #team stuff
         self.team_list = []
         self.message_queues=[]
-        for x in range(0, len(ai_list)):
+        for x in xrange(0, len(ai_list)):
             self.team_list.append(Team(x, ai_list[x], self.team_colours[x]))
             self.message_queues.append([])
         
@@ -389,7 +393,7 @@ class Game(object):
         #create probe/view list
         view_list=[]
         for p in self.probe_list:
-            view_list.append((p, View(p,self.grid, self.message_queues)))
+            view_list.append((p, copy.deepcopy(View(p,self.grid, self.message_queues))))
         
 
         #create action and message list
@@ -423,13 +427,64 @@ class Game(object):
         for (p,act) in action_list:
             if act.get_type()==ACT_BUILD_PROBE:
                 res=p.get_cargo()['ressources']
-                if res[0]>=PROBE_COST and res[1]>=PROBE_COST and res[2]>=PROBE_COST:
-                    temp_probe=Probe(copy.deepcopy(p.get_pos()), p.get_team(), p.get_team().get_ai()[1].ProbeAi, act.get_data())
+                if p.get_landed() and res[0]>=PROBE_COST and res[1]>=PROBE_COST and res[2]>=PROBE_COST:
+                    temp_probe=Probe(copy.deepcopy(p.get_pos()), p.get_team(), p.get_team().get_ai()[1].ProbeAi, copy.deepcopy(act.get_data()))
                     self.probe_list.append(temp_probe)
                     self.grid[p.get_pos()[0]][p.get_pos()[1]]['probes'].append(temp_probe)
                     #print self.grid
                     p.pay_probe()
-
+        #load stuff
+        for (p,act) in action_list:
+            if act.get_type()==ACT_LOAD:
+                cargo=act.get_data()
+                if len(self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'])==1 and p.get_landed()==False:
+                    if self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].is_populated():
+                        landed_probe=self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].populating_probe()
+                        if landed_probe.get_team()==p.get_team():
+                            #ressources
+                            wanted_res=cargo['ressources']
+                            probe_res=p.get_cargo()['ressources']
+                            station_res=landed_probe.get_cargo()['ressources']
+                            free_slots=p.get_free_slots()
+                            for i in xrange(3):
+                                if wanted_res[i]<=station_res[i]:
+                                    if free_slots>=wanted_res[i]:
+                                        station_res[i]-=wanted_res[i]
+                                        probe_res[i]+=wanted_res[i]
+                                        free_slots-=wanted_res[i]
+                                    else:
+                                        station_res[i]-=free_slots
+                                        probe_res[i]+=free_slots
+                                        free_slots=0
+                                else:
+                                    if free_slots>=station_res[i]:
+                                        probe_res[i]+=station_res[i]
+                                        free_slots-=station_res[i]
+                                        station_res[i]=0
+                                    else:
+                                        station_res[i]-=free_slots
+                                        probe_res[i]+=free_slots
+                                        free_slots=0
+        
+        #unload stuff
+        for (p,act) in action_list:
+            if act.get_type()==ACT_UNLOAD:
+                cargo=act.get_data()
+                if len(self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'])==1 and p.get_landed()==False:
+                    if self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].is_populated():
+                        landed_probe=self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].populating_probe()
+                        if landed_probe.get_team()==p.get_team():
+                            #ressources
+                            dump_res=cargo['ressources']
+                            probe_res=p.get_cargo()['ressources']
+                            station_res=landed_probe.get_cargo()['ressources']
+                            for i in xrange(3):
+                                if dump_res[i]<=probe_res[i]:
+                                    probe_res[i]-=dump_res[i]
+                                    station_res[i]+=dump_res[i]
+                                else:
+                                    station_res[i]+=probe_res[i]
+                                    probe_res[i]=0
         #move probes
         for (p,act) in action_list:
             if act.get_type()==ACT_MOVE:
@@ -468,8 +523,13 @@ def get_ai(name):
 
 def main():
      global ai_list
+     print sys.path
      ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
-     
+     mygame = Game(ai_list)
+
+     while 1:
+         mygame.tick()
+
 #background = pygame.Surface((UNIVERSE_WIDTH*SCALE,UNIVERSE_HEIGHT*SCALE))
 #background.fill((0,0,0)
 
@@ -479,7 +539,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    mygame = Game(ai_list)
-
-    while 1:
-        mygame.tick()
+    
