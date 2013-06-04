@@ -23,6 +23,8 @@ SCALE = 2
 RES_MAX = 100
 CARGO_SLOTS = 1000
 PROBE_COST = 1000
+GUN_COST = 250
+GUN_SLOTS = 250
 PROBE_RANGE = 3
 PLANET_RANGE = 5
 
@@ -91,7 +93,7 @@ class Display(object):
         self.set_frame(self.draft_surface)
        
 # Actions available to an agent on each turn.
-ACT_BUILD_PROBE, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_IDLE = range(6)
+ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_IDLE = range(7)
 
 class Action(object):
     '''
@@ -241,8 +243,14 @@ class Probe(object):
         res[0]=res[0]-PROBE_COST
         res[1]=res[1]-PROBE_COST
         res[2]=res[2]-PROBE_COST
-        self.cargo['ressources']=res                
-        
+    
+    def pay_gun(self):
+        res=self.cargo['ressources']
+        res[0]=res[0]-PROBE_GUN
+        res[1]=res[1]-PROBE_GUN
+        res[2]=res[2]-PROBE_GUN
+    
+
     def set_landed(self, landed):
         self.landed=landed
         
@@ -433,6 +441,16 @@ class Game(object):
                     self.grid[p.get_pos()[0]][p.get_pos()[1]]['probes'].append(temp_probe)
                     #print self.grid
                     p.pay_probe()
+        
+        #build new guns
+        for (p,act) in action_list:
+            if act.get_type()==ACT_BUILD_GUN:
+                res=p.get_cargo()['ressources']
+                if p.get_landed() and res[0]>=GUN_COST and res[1]>=GUN_COST and res[2]>=GUN_COST:
+                    p.cargo['guns']+=1
+                    #print self.grid
+                    p.pay_gun()
+        
         #load stuff
         for (p,act) in action_list:
             if act.get_type()==ACT_LOAD:
