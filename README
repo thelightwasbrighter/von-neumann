@@ -57,8 +57,10 @@ The Action conctructor has to receive one of the following keywords, defined in 
 
 ACT_BUILD_PROBE:
   Build a new probe which is then spawned in the next round. If you don't have enough resources, nothing will happen. You can pass an additional argument to the Action constructor which will be passed to the constructor of the new probe, which can be very useful.
+
 ACT_BUILD_GUN:
   Build a gun which will be spawned in the probes cargo room next round.
+
 ACT_BUILD_ARMOR:
   Build an armor unit which will be spawned in the probes cargo room next round.
 
