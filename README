@@ -4,6 +4,8 @@ Requirements:
 
 Usage:
 	./von-neumann [ai1] [ai2] ...
+        
+        The AIs have to be placed in the ais/ directory.
 
 Each player starts out with one probe on a planet. A landed probe automatically mines the resources of the planet and can use these to build objects, such as new probes, guns or armor. Once a probe has landed on a planet, it will stay there. It cannot launch back into space. There are three types of resource in this game. If you build items, each of these resources will be used to the same amount. All planets except for the homeworlds only provide two of the three resources. This means, that you have to transport resources between planets in order to use your resources effectively.
 
