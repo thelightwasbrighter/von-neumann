@@ -151,49 +151,6 @@ class Planet(object):
         else:
             pass
 
-def assign_networks(grid, probe_list):
-    probe_check=[]
-    id_count=0
-    temp_id=0
-    for n in probe_list:
-        probe_check.append(False)
-    while probe_check.count(False)>0:
-        init_probe=probe_list[probe_check.index(False)]
-        check_grid=[]
-        for x in xrange(UNIVERSE_WIDTH):
-            check_grid.append([])
-            for y in xrange(UNIVERSE_HEIGHT):
-                check_grid[x].append(False)
-        probe_queue=[init_probe]
-        probe_list_temp=[]
-        while len(probe_queue)!=0:
-            #print probe_queue
-            probe_temp=probe_queue.pop()
-            for x in xrange(-PROBE_RANGE,PROBE_RANGE):
-                if probe_temp.get_sector()[0]+x>=0 and probe_temp.get_sector()[0]+x<UNIVERSE_WIDTH:
-                    for y in xrange(-PROBE_RANGE,PROBE_RANGE):
-                        if probe_temp.get_sector()[1]+y>=0 and probe_temp.get_sector()[1]+y<UNIVERSE_HEIGHT:
-                            if check_grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]==False:
-                                for p in grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]['probes']:
-                                    if p.get_team()==probe_temp.get_team():
-                                        if probe_check[probe_list.index(p)]==True:
-                                            for i in xrange(len(probe_list)):
-                                                if probe_check[i]==True:
-                                                    if probe_list[i].get_net_id()==p.get_net_id():
-                                                        probe_list[i].set_net_id(temp_id)
-                                        else:
-                                            probe_list_temp.append(p)
-                                            if p!=probe_temp:
-                                                probe_queue.append(p)
-                                            #check_grid[p.get_sector()[0]][p.get_sector()[1]]=True
-                                check_grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]=True
-        for p in probe_list_temp:
-            p.set_net_id(temp_id)
-            probe_check[probe_list.index(p)]=True
-        temp_id=temp_id+1
-
-
-
 class Probe(object):
     def calc_sector(self):
         self.sector=[int(math.floor(self.pos[0])), int(math.floor(self.pos[1]))]
@@ -479,9 +436,11 @@ class Game(object):
                 if victim!=None:
                     if fight(p,victim):
                         death_list.append(victim)
-                        print "KILL"
+                        #print "KILL"
+        
         #remove killed probes
-        for k in death_list:
+        death_set=set(death_list)
+        for k in death_set:
             for action in action_list:
                 if action[0]==k:
                     action_list.remove(action)
@@ -708,3 +667,46 @@ def main():
 if __name__ == "__main__":
     main()
     
+
+def assign_networks(grid, probe_list):
+    probe_check=[]
+    id_count=0
+    temp_id=0
+    for n in probe_list:
+        probe_check.append(False)
+    while probe_check.count(False)>0:
+        init_probe=probe_list[probe_check.index(False)]
+        check_grid=[]
+        for x in xrange(UNIVERSE_WIDTH):
+            check_grid.append([])
+            for y in xrange(UNIVERSE_HEIGHT):
+                check_grid[x].append(False)
+        probe_queue=[init_probe]
+        probe_list_temp=[]
+        while len(probe_queue)!=0:
+            #print probe_queue
+            probe_temp=probe_queue.pop()
+            for x in xrange(-PROBE_RANGE,PROBE_RANGE):
+                if probe_temp.get_sector()[0]+x>=0 and probe_temp.get_sector()[0]+x<UNIVERSE_WIDTH:
+                    for y in xrange(-PROBE_RANGE,PROBE_RANGE):
+                        if probe_temp.get_sector()[1]+y>=0 and probe_temp.get_sector()[1]+y<UNIVERSE_HEIGHT:
+                            if check_grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]==False:
+                                for p in grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]['probes']:
+                                    if p.get_team()==probe_temp.get_team():
+                                        if probe_check[probe_list.index(p)]==True:
+                                            for i in xrange(len(probe_list)):
+                                                if probe_check[i]==True:
+                                                    if probe_list[i].get_net_id()==p.get_net_id():
+                                                        probe_list[i].set_net_id(temp_id)
+                                        else:
+                                            probe_list_temp.append(p)
+                                            if p!=probe_temp:
+                                                probe_queue.append(p)
+                                            #check_grid[p.get_sector()[0]][p.get_sector()[1]]=True
+                                check_grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]=True
+        for p in probe_list_temp:
+            p.set_net_id(temp_id)
+            probe_check[probe_list.index(p)]=True
+        temp_id=temp_id+1
+
+
