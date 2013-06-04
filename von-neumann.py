@@ -25,7 +25,9 @@ CARGO_SLOTS = 1000
 PROBE_COST = 1000
 GUN_COST = 250
 GUN_SLOTS = 250
-PROBE_RANGE = 3
+ARMOR_COST = 250
+ARMOR_SLOTS = 250
+PROBE_RANGE = 20
 PLANET_RANGE = 5
 
 
@@ -93,7 +95,7 @@ class Display(object):
         self.set_frame(self.draft_surface)
        
 # Actions available to an agent on each turn.
-ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_IDLE = range(7)
+ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_BUILD_ARMOR, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_ATTACK, ACT_IDLE = range(9)
 
 class Action(object):
     '''
@@ -196,12 +198,13 @@ class Probe(object):
     def calc_sector(self):
         self.sector=[int(math.floor(self.pos[0])), int(math.floor(self.pos[1]))]
     
-    def __init__(self, pos, team, ai, cargs):
+    def __init__(self, pos, team, ai, probe_id, cargs):
+        self.probe_id=probe_id
         self.pos = pos
         self.team = team
         self.ai = ai(cargs)
         self.landed=False
-        self.cargo={'ressources':[0,0,0]}
+        self.cargo={'ressources':[0,0,0], 'guns':0, 'armor':0}
         self.free_slots=CARGO_SLOTS
         self.act = self.ai.act
         self.calc_sector()
@@ -209,6 +212,12 @@ class Probe(object):
     def get_team(self):
         return self.team
 
+    def get_id(self):
+        return self.probe_id
+    
+    def get_team_id(self):
+        return self.team.get_id()
+    
     def get_net_id(self):
         return self.network_id
 
@@ -216,7 +225,7 @@ class Probe(object):
         self.network_id = net_id
 
     def scanned(self):
-        return {'pos':self.pos, 'landed':self.landed, 'cargo':self.cargo, 'team_id':self.team.get_id()}
+        return {'pos':self.pos, 'sector':self.get_sector(), 'landed':self.landed, 'cargo':self.cargo, 'team_id':self.team.get_id(), 'probe_id':self.probe_id}
 
     def get_ai(self):
         return self.ai
@@ -236,19 +245,26 @@ class Probe(object):
         return self.pos
 
     def get_sector(self):
+        self.calc_sector()
         return self.sector
 
     def pay_probe(self):
         res=self.cargo['ressources']
-        res[0]=res[0]-PROBE_COST
-        res[1]=res[1]-PROBE_COST
-        res[2]=res[2]-PROBE_COST
+        res[0]-=PROBE_COST
+        res[1]-=PROBE_COST
+        res[2]-=PROBE_COST
     
     def pay_gun(self):
         res=self.cargo['ressources']
-        res[0]=res[0]-PROBE_GUN
-        res[1]=res[1]-PROBE_GUN
-        res[2]=res[2]-PROBE_GUN
+        res[0]-=GUN_COST
+        res[1]-=GUN_COST
+        res[2]-=GUN_COST
+    
+    def pay_armor(self):
+        res=self.cargo['ressources']
+        res[0]-=ARMOR_COST
+        res[1]-=ARMOR_COST
+        res[2]-=ARMOR_COST
     
 
     def set_landed(self, landed):
@@ -261,6 +277,8 @@ class Probe(object):
         self.free_slots=CARGO_SLOTS
         for i in xrange(3):
             self.free_slots-=self.cargo['ressources'][i]
+        self.free_slots-=GUN_SLOTS*self.cargo['guns']
+        self.free_slots-=ARMOR_SLOTS*self.cargo['armor']
         return self.free_slots
 
     def get_cargo(self):
@@ -305,6 +323,33 @@ class View(object):
                             self.scans['probes'].append(probe.scanned())
         self.messages=message_queues[probe.get_team().get_id()]
 
+def fight(attacker, victim):
+    if attacker.get_landed():
+        if attacker.get_cargo()['guns']>0:
+            if attacker.get_cargo()['guns']>=int(math.floor(CARGO_SLOTS/GUN_SLOTS)):
+                attack_bonus=int(math.floor(CARGO_SLOTS/GUN_SLOTS))
+            else:
+                attack_bonus=attacker.get_cargo()['guns']
+        else:
+            return False
+    else:
+        if attacker.get_cargo()['guns']>0:
+            attack_bonus=attacker.get_cargo()['guns']
+        else:
+            return False
+
+    if victim.get_landed():
+        if victim.get_cargo()['armor']>=int(math.floor(CARGO_SLOTS/ARMOR_SLOTS)):
+            defense_bonus=int(math.floor(CARGO_SLOTS/ARMOR_SLOTS))
+        else:
+            defense_bonus=victim.get_cargo()['armor']
+    else:
+        defense_bonus=victim.get_cargo()['armor']
+
+    min_dice_val=10-attack_bonus+defense_bonus
+    return random.randint(0,20)>min_dice_val
+        
+
 class Game(object):
     def __init__(self, ai_list):
         self.rounds=0
@@ -317,6 +362,7 @@ class Game(object):
         self.team_colours.append((255,255,0))
         self.team_colours.append((255,0,255))
         self.team_colours.append((0,255,255))
+        self.probe_id_counter=0
         
         #create grid
         self.grid=[]
@@ -373,7 +419,8 @@ class Game(object):
         #create initial probes
         self.probe_list = []
         for x in xrange(0, len(ai_list)):
-            temp_probe=Probe([0,0], self.team_list[x], self.ais[x], 'initial')
+            temp_probe=Probe([0,0], self.team_list[x], self.ais[x], self.probe_id_counter, 'initial')
+            self.probe_id_counter+=1
             self.probe_list.append(temp_probe)
             self.grid[self.planet_list[x].get_pos()[0]][self.planet_list[x].get_pos()[1]]['probes'].append(temp_probe)
             self.planet_list[x].populate(self.probe_list[x])
@@ -418,9 +465,31 @@ class Game(object):
         for (p,m) in message_list:
             self.message_queues[p.get_team().get_id()].append(m)
     
-        #print action_list[0][1].get_type(), action_list[0][1].get_data()
-            
-        
+                
+        #fight
+        death_list=[]
+        for (p,act) in action_list:
+            if act.get_type()==ACT_ATTACK:
+                victim_id=act.get_data()
+                probes=self.grid[p.get_sector()[0]][p.get_sector()[1]]['probes']
+                victim=None
+                for pp in probes:
+                    if pp.get_id()==victim_id:
+                        victim=pp
+                if victim!=None:
+                    if fight(p,victim):
+                        death_list.append(victim)
+                        print "KILL"
+        #remove killed probes
+        for k in death_list:
+            for action in action_list:
+                if action[0]==k:
+                    action_list.remove(action)
+            self.grid[k.get_sector()[0]][k.get_sector()[1]]['probes'].remove(k)
+            if k.get_landed():
+                self.grid[k.get_sector()[0]][k.get_sector()[1]]['planets'][0].unpopulate()
+            self.probe_list.remove(k)
+                        
         #colonize planets
         for (p,act) in action_list:
             if act.get_type()==ACT_COLONIZE:
@@ -436,9 +505,10 @@ class Game(object):
             if act.get_type()==ACT_BUILD_PROBE:
                 res=p.get_cargo()['ressources']
                 if p.get_landed() and res[0]>=PROBE_COST and res[1]>=PROBE_COST and res[2]>=PROBE_COST:
-                    temp_probe=Probe(copy.deepcopy(p.get_pos()), p.get_team(), p.get_team().get_ai()[1].ProbeAi, copy.deepcopy(act.get_data()))
+                    temp_probe=Probe(copy.deepcopy(p.get_pos()), p.get_team(), p.get_team().get_ai()[1].ProbeAi, self.probe_id_counter, copy.deepcopy(act.get_data()))
+                    self.probe_id_counter+=1
                     self.probe_list.append(temp_probe)
-                    self.grid[p.get_pos()[0]][p.get_pos()[1]]['probes'].append(temp_probe)
+                    self.grid[p.get_sector()[0]][p.get_sector()[1]]['probes'].append(temp_probe)
                     #print self.grid
                     p.pay_probe()
         
@@ -450,6 +520,15 @@ class Game(object):
                     p.cargo['guns']+=1
                     #print self.grid
                     p.pay_gun()
+        
+        #build new armor
+        for (p,act) in action_list:
+            if act.get_type()==ACT_BUILD_ARMOR:
+                res=p.get_cargo()['ressources']
+                if p.get_landed() and res[0]>=ARMOR_COST and res[1]>=ARMOR_COST and res[2]>=ARMOR_COST:
+                    p.cargo['armor']+=1
+                    #print self.grid
+                    p.pay_armor()
         
         #load stuff
         for (p,act) in action_list:
@@ -483,7 +562,51 @@ class Game(object):
                                         station_res[i]-=free_slots
                                         probe_res[i]+=free_slots
                                         free_slots=0
-        
+                            #guns
+                            wanted_guns=cargo['guns']
+                            station_guns=landed_probe.get_cargo()['guns']
+                            probe_guns=p.get_cargo()['guns']
+
+                            if wanted_guns<=station_guns:
+                                if free_slots>=GUN_SLOTS*wanted_guns:
+                                    probe_guns+=wanted_guns
+                                    station_guns-=wanted_guns
+                                else:
+                                    probe_guns+=int(math.floor(free_slots/GUN_SLOTS))
+                                    station_guns-=int(math.floor(free_slots/GUN_SLOTS))
+                            else:
+                                if free_slots>=GUN_SLOTS*station_guns:
+                                    probe_guns+=station_guns
+                                    station_guns=0
+                                else:
+                                    probe_guns+=int(math.floor(free_slots/GUN_SLOTS))
+                                    station_guns-=int(math.floor(free_slots/GUN_SLOTS))
+                            p.get_cargo()['guns']=probe_guns
+                            landed_probe.get_cargo()['guns']=station_guns
+
+
+                            #armor
+                            wanted_armor=cargo['armor']
+                            station_armor=landed_probe.get_cargo()['armor']
+                            probe_armor=p.get_cargo()['armor']
+
+                            if wanted_armor<=station_armor:
+                                if free_slots>=GUN_SLOTS*wanted_armor:
+                                    probe_armor+=wanted_armor
+                                    station_armor-=wanted_armor
+                                else:
+                                    probe_armor+=int(math.floor(free_slots/ARMOR_SLOTS))
+                                    station_armor-=int(math.floor(free_slots/ARMOR_SLOTS))
+                            else:
+                                if free_slots>=GUN_SLOTS*station_armor:
+                                    probe_armor+=station_armor
+                                    station_armor=0
+                                else:
+                                    probe_armor+=int(math.floor(free_slots/ARMOR_SLOTS))
+                                    station_armor-=int(math.floor(free_slots/ARMOR_SLOTS))
+                            p.get_cargo()['armor']=probe_armor
+                            landed_probe.get_cargo()['armor']=station_armor
+
         #unload stuff
         for (p,act) in action_list:
             if act.get_type()==ACT_UNLOAD:
@@ -503,6 +626,33 @@ class Game(object):
                                 else:
                                     station_res[i]+=probe_res[i]
                                     probe_res[i]=0
+
+                            #guns
+                            dump_guns=cargo['guns']
+                            probe_guns=p.get_cargo()['guns']
+                            station_guns=landed_probe.get_cargo()['guns']
+                            if dump_guns<=probe_guns:
+                                probe_guns-=dump_guns
+                                station_guns+=dump_guns
+                            else:
+                                station_guns+=probe_guns
+                                probe_guns=0
+                            p.get_cargo()['guns']=probe_guns
+                            landed_probe.get_cargo()['guns']=station_guns
+
+
+                            #armor
+                            dump_armor=cargo['armor']
+                            probe_armor=p.get_cargo()['armor']
+                            station_armor=landed_probe.get_cargo()['armor']
+                            if dump_armor<=probe_armor:
+                                probe_armor-=dump_armor
+                                station_armor+=dump_armor
+                            else:
+                                station_armor+=probe_armor
+                                probe_armor=0
+                            p.get_cargo()['armor']=probe_armor
+                            landed_probe.get_cargo()['armor']=station_armor
         #move probes
         for (p,act) in action_list:
             if act.get_type()==ACT_MOVE:
