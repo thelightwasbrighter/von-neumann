@@ -3,7 +3,7 @@ Requirements:
 	pygame
 
 Usage:
-	./von-neumann [ai1] [ai2] ...
+	./von-neumann.py [ai1] [ai2] ...
         
         The AIs have to be placed in the ais/ directory.
 
