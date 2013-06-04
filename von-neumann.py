@@ -11,7 +11,6 @@ import copy
 import pygame, pygame.locals
 sys.path.reverse()
 sys.path.append(sys.path[len(sys.path)-1]+'/ais')
-sys.path.append('/home/peter/Documents/C++/von-neumann/ais')
 sys.path.reverse()
 
    
