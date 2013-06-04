@@ -15,10 +15,10 @@ sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 200
-UNIVERSE_HEIGHT = 100
-PLANETS = 150
-SCALE = 4
+UNIVERSE_WIDTH = 500
+UNIVERSE_HEIGHT = 300
+PLANETS = 300
+SCALE = 2
 RES_MAX = 100
 CARGO_SLOTS = 1000
 PROBE_COST = 1000
@@ -93,7 +93,7 @@ class Display(object):
         self.draft_surface.blit(self.probe_surface, (0,0))
         self.set_frame(self.draft_surface)
        
-# Actions available to an agent on each turn.
+# Actions available to a probe on each turn.
 ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_BUILD_ARMOR, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_ATTACK, ACT_IDLE = range(9)
 
 class Action(object):
@@ -118,7 +118,6 @@ class Planet(object):
         self.ressource=ressource
         self.populated=False
         self.probe=None
-
     def populate(self, probe):
         self.probe=probe
         self.populated=True
@@ -128,15 +127,18 @@ class Planet(object):
 
     def get_pos(self):
         return self.pos
+    
+    def get_sector(self):
+        return [int(math.floor(self.pos[0])),int(math.floor(self.pos[1]))]
 
     def get_res(self):
         return self.ressource
 
     def scanned(self):
         if self.populated:
-            return {'pos':self.pos, 'res':self.ressource, 'populated':self.populated, 'team_id':self.probe.get_team().get_id()}
+            return {'pos':self.pos, 'sector':self.get_sector(), 'res':self.ressource, 'populated':self.populated, 'team_id':self.probe.get_team().get_id()}
         else:
-            return {'pos':self.pos, 'res':self.ressource, 'populated':self.populated, 'team_id':None}
+            return {'pos':self.pos, 'sector':self.get_sector(), 'res':self.ressource, 'populated':self.populated, 'team_id':None}
             
     def set_res(self, res):
         self.ressource=res
@@ -413,7 +415,8 @@ class Game(object):
         for (p,v) in view_list:
             reaction=p.act(v)
             action_list.append((p, reaction['action']))
-            message_list.append((p, reaction['message']))
+            if reaction['message']!=None:
+                message_list.append((p, reaction['message']))
         
         #sort messages
         for m in self.message_queues:
@@ -649,7 +652,7 @@ def get_ai(name):
 
 def main():
      global ai_list
-     print sys.path
+     #print sys.path
      ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
      mygame = Game(ai_list)
 
