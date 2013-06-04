@@ -15,10 +15,10 @@ sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 300
-UNIVERSE_HEIGHT = 200
-PLANETS = 30
-SCALE = 2
+UNIVERSE_WIDTH = 200
+UNIVERSE_HEIGHT = 100
+PLANETS = 150
+SCALE = 4
 RES_MAX = 100
 CARGO_SLOTS = 1000
 PROBE_COST = 1000
@@ -26,9 +26,9 @@ GUN_COST = 250
 GUN_SLOTS = 250
 ARMOR_COST = 250
 ARMOR_SLOTS = 250
-PROBE_RANGE = 20
+PROBE_RANGE = 10
 PLANET_RANGE = 5
-
+MAX_SPEED=0.4
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -617,9 +617,9 @@ class Game(object):
                 pos=p.get_pos()
                 self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].remove(p)
                 betrag=math.sqrt(math.pow(act.get_data()[0],2)+math.pow(act.get_data()[1],2))
-                if betrag>1:
-                    pos[0]=pos[0]+act.get_data()[0]/betrag
-                    pos[1]=pos[1]+act.get_data()[1]/betrag
+                if betrag>MAX_SPEED:
+                    pos[0]=pos[0]+MAX_SPEED*act.get_data()[0]/betrag
+                    pos[1]=pos[1]+MAX_SPEED*act.get_data()[1]/betrag
                 else:
                     pos[0]=pos[0]+act.get_data()[0]
                     pos[1]=pos[1]+act.get_data()[1]
