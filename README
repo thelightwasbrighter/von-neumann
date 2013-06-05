@@ -34,6 +34,9 @@ View contains following information:
   landed:
     True if the probe is on a planet. False if it's in space
 
+  cargo:
+    The cargo directory of the probe (see below for more information)
+
   sector:
     The sector in which the probe currently is. This is a truncated version of pos and also comes as a list with two entries
 
