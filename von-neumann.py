@@ -485,7 +485,8 @@ class Game(object):
                 except:
                     print "The ai of team",p.get_team().get_id(),"caused an error!"
                     reaction={'action':Action(ACT_IDLE), 'message':None} 
-            
+            if reaction==None
+            reaction={'action':Action(ACT_IDLE), 'message':None} 
             action_list.append((p, reaction['action']))
             if reaction['message']!=None:
                 message_list.append((p, reaction['message']))
