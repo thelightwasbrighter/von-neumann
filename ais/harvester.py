@@ -46,6 +46,7 @@ class ProbeAi(object):
                 local_planet=p
         p_res=p['res']
         highest=0
+        m=0
         for x in range(3):
             if p_res[x]>highest:
                 highest=p_res[x]

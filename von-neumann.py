@@ -16,9 +16,9 @@ sys.path.reverse()
    
 
 UNIVERSE_WIDTH = 200
-UNIVERSE_HEIGHT = 200
-PLANETS = 280
-SCALE = 4
+UNIVERSE_HEIGHT = 150
+PLANETS = 40
+SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
 PROBE_COST = 800
@@ -28,7 +28,7 @@ ARMOR_COST = 250
 ARMOR_SLOTS = 2500
 PROBE_RANGE = 5
 PLANET_RANGE = 5
-MAX_SPEED=1
+MAX_SPEED=0.7
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -438,7 +438,7 @@ class Game(object):
                 if victim!=None:
                     if fight(p,victim):
                         death_list.append(victim)
-                        #print "KILL"
+                        print "KILL"
         
         #remove killed probes
         death_set=set(death_list)
