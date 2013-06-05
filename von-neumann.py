@@ -17,9 +17,9 @@ sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 200
-UNIVERSE_HEIGHT = 150
-PLANETS = 2
+UNIVERSE_WIDTH = 400
+UNIVERSE_HEIGHT = 300
+PLANETS = 150
 SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
@@ -31,7 +31,7 @@ ARMOR_SLOTS = 2000
 PROBE_RANGE = 5
 PLANET_RANGE = 5
 MAX_SPEED=0.7
-MAX_ROUNDS = 13500
+MAX_ROUNDS = 1350
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -449,7 +449,7 @@ class Game(object):
         
         #check for end of game
         num_players=sum(t.get_alive() for t in self.team_list)
-        if num_players<1:
+        if num_players<2:
             self.finished==True
             if num_players==0:
                 return 'draw'
