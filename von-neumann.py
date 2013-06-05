@@ -709,7 +709,7 @@ class Game(object):
                     self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].append(p)
 
                 else:
-                    print "landed probe attempted to move"
+                    print "landed probe of team",p.get_team().get_id(),  "attempted to move"
                
         
         #update display
