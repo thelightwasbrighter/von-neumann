@@ -7,6 +7,7 @@ import time
 import importlib
 import copy
 import pygame, pygame.locals
+#import pp
 
 
 
@@ -35,7 +36,8 @@ PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
 DEBUG_AI=True
-
+MAXIMUM_STATION_GUNS = 4
+MAXIMUM_STATION_ARMOR = 8
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -198,15 +200,7 @@ class Probe(object):
 
     def set_pos(self, pos):
         self.pos = pos
-        if self.pos[0]>UNIVERSE_WIDTH-1:
-            self.pos[0]=UNIVERSE_WIDTH-1
-        elif self.pos[0]<0:
-            self.pos[0]=0
-        if self.pos[1]>UNIVERSE_HEIGHT-1:
-            self.pos[1]=UNIVERSE_HEIGHT-1
-        elif self.pos[1]<0:
-            self.pos[1]=0
-    
+        
     def get_pos(self):
         return self.pos
     
@@ -309,20 +303,26 @@ class View(object):
         self.scans = {'planets':[], 'probes':[]}
         self.probe_id = probe.get_id()
         for x in xrange(-PROBE_RANGE,PROBE_RANGE):
-            if self.sector[0]+x>0 and self.sector[0]+x<UNIVERSE_WIDTH:
-                for y in xrange(-PROBE_RANGE,PROBE_RANGE):
-                    if self.sector[1]+y>0 and self.sector[1]+y<UNIVERSE_HEIGHT:
-                        for planet in grid[self.sector[0]+x][self.sector[1]+y]['planets']:
-                            self.scans['planets'].append(planet.scanned())
-                        for probe in grid[self.sector[0]+x][self.sector[1]+y]['probes']:
-                            self.scans['probes'].append(probe.scanned())
+            for y in xrange(-PROBE_RANGE,PROBE_RANGE):
+                if self.sector[0]+x<0:
+                    x+=UNIVERSE_WIDTH
+                elif self.sector[0]+x>UNIVERSE_WIDTH-1:
+                    x-=UNIVERSE_WIDTH
+                if self.sector[1]+y<0:
+                    y+=UNIVERSE_HEIGHT
+                elif self.sector[1]+y>UNIVERSE_HEIGHT-1:
+                    y-=UNIVERSE_HEIGHT
+                for planet in grid[self.sector[0]+x][self.sector[1]+y]['planets']:
+                    self.scans['planets'].append(planet.scanned())
+                for probe in grid[self.sector[0]+x][self.sector[1]+y]['probes']:
+                    self.scans['probes'].append(probe.scanned())
         self.messages=message_queues[probe.get_team().get_id()]
 
 def fight(attacker, victim):
     if attacker.get_landed():
         if attacker.get_cargo()['guns']>0:
-            if attacker.get_cargo()['guns']>=4:
-                attack_bonus=4
+            if attacker.get_cargo()['guns']>=MAXIMUM_STATION_GUNS:
+                attack_bonus=MAXIMUM_STATION_GUNS
             else:
                 attack_bonus=attacker.get_cargo()['guns']
         else:
@@ -334,8 +334,8 @@ def fight(attacker, victim):
             return False
 
     if victim.get_landed():
-        if victim.get_cargo()['armor']>=8:
-            defense_bonus=8
+        if victim.get_cargo()['armor']>=MAXIMUM_STATION_ARMOR:
+            defense_bonus=MAXIMUM_STATION_ARMOR
         else:
             defense_bonus=victim.get_cargo()['armor']
     else:
@@ -361,6 +361,9 @@ class Game(object):
         self.finished=False
         #create grid
         self.grid=[]
+        #self.ppservers = ()
+        #self.job_server = pp.Server(ppservers=self.ppservers)
+        #print "Starting pp with", self.job_server.get_ncpus(), "workers"
         for x in xrange(UNIVERSE_WIDTH):
             self.grid.append([])
             for y in xrange(UNIVERSE_HEIGHT):
@@ -427,7 +430,10 @@ class Game(object):
         #self.mydisplay.new_draft()
         #self.draw_planets()
         #self.mydisplay.draw_draft()
-                
+    
+    def append_view(self, planet):
+        self.view_list.append((planet, copy.deepcopy(View(planet,self.grid, self.message_queues))))
+        
     def tick(self):
         #print information
         self.rounds=self.rounds+1
@@ -462,15 +468,15 @@ class Game(object):
                 p.populating_probe().add_resources(p.get_res())
                 
         #create probe/view list
-        view_list=[]
+        self.view_list=[]
         for p in self.probe_list:
-            view_list.append((p, copy.deepcopy(View(p,self.grid, self.message_queues))))
-        
+            self.append_view(p)
+                    
 
         #create action and message list
         action_list = []
         message_list = []
-        for (p,v) in view_list:
+        for (p,v) in self.view_list:
             if DEBUG_AI:
                 reaction=p.act(v)
             else:
@@ -697,14 +703,14 @@ class Game(object):
                     else:
                         pos[0]=pos[0]+act.get_data()[0]
                         pos[1]=pos[1]+act.get_data()[1]
-                    if pos[0]>=UNIVERSE_WIDTH-1:
-                        pos[0]=UNIVERSE_WIDTH-1
-                    if pos[0]<0:
-                        pos[0]=0
-                    if pos[1]>=UNIVERSE_HEIGHT-1:
-                        pos[1]=UNIVERSE_HEIGHT-1
-                    if pos[1]<0:
-                        pos[1]=0
+                    if pos[0]>=UNIVERSE_WIDTH:
+                        pos[0]-=UNIVERSE_WIDTH
+                    elif pos[0]<0:
+                        pos[0]+=UNIVERSE_WIDTH
+                    if pos[1]>=UNIVERSE_HEIGHT:
+                        pos[1]-=UNIVERSE_HEIGHT
+                    elif pos[1]<0:
+                        pos[1]+=UNIVERSE_HEIGHT
                     p.set_pos(pos)
                     self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].append(p)
 

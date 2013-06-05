@@ -110,3 +110,5 @@ PROBE_POINTS:	  points for a probe at the end of the game
 PLANET_POINTS:	  points for a colonized planet at the end of the game
 DEFAULT_TOURNAMENT_GAMES: Default number of games played in a tournament
 DEBUG_AI:         if this value is true, errors in the ai will cause the program to crash. If it is false, an error in the ai will lead to the probe doing nothing
+MAXIMUM_STATION_GUNS: Maximum amount of guns a landed probe can use in battle
+MAXIMUM_STATION_ARMOR: Maximum amount of armor units a landed probe can use in battle
