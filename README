@@ -9,6 +9,8 @@ Usage:
 
 Each player starts out with one probe on a planet. A landed probe automatically mines the resources of the planet and can use these to build objects, such as new probes, guns or armor. Once a probe has landed on a planet, it will stay there. It cannot launch back into space. There are three types of resource in this game. If you build items, each of these resources will be used to the same amount. All planets except for the homeworlds only provide two of the three resources. This means, that you have to transport resources between planets in order to use your resources effectively.
 
+The game either ends when there is a single surviving team, or when the predefined maximum number of rounds have been played. If this is the case the weighted sum of the probes and colonized planets is calculated for each team. The team with the most points wins.
+
 The probes that are in space can move around freely, however there is a maximum velocity.
 The space is divided into a grid of sectors. The truncated coordinates of each probe represent its sector. Certain interactions, such as battle, loading and unloading of cargo can only take place if the participating probes are in the same sector.
 
@@ -99,4 +101,7 @@ ARMOR_COST:	  Armor unit cost
 ARMOR_SLOTS:	  Number of cargo slots taken by an armor unit
 PROBE_RANGE:      Scanner range of a probe
 MAX_SPEED:        maximum distance that can be covered in one round
+MAX_ROUNDS:	  maximum rounds in a game
+PROBE_POINTS:	  points for a probe at the end of the game
+PLANET_POINTS	  points for a colonized planet at the end of the game
 

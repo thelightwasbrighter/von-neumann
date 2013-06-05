@@ -1,34 +1,38 @@
 #!/usr/bin/env python2
 
-#import ConfigParser
 import random
 import math
 import sys
 import time
 import importlib
 import copy
-#import numpy
 import pygame, pygame.locals
+
+
+
 sys.path.reverse()
 sys.path.append(sys.path[len(sys.path)-1]+'/ais')
 sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 300
+UNIVERSE_WIDTH = 200
 UNIVERSE_HEIGHT = 200
-PLANETS = 100
+PLANETS = 40
 SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
-PROBE_COST = 800
+PROBE_COST = 1000
 GUN_COST = 250
-GUN_SLOTS = 2500
+GUN_SLOTS = 2000
 ARMOR_COST = 250
-ARMOR_SLOTS = 2500
+ARMOR_SLOTS = 2000
 PROBE_RANGE = 5
 PLANET_RANGE = 5
 MAX_SPEED=0.7
+MAX_ROUNDS = 2000
+PROBE_POINTS = 1
+PLANET_POINTS=20
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -248,10 +252,36 @@ class Probe(object):
 
 
 class Team(object):
-    def __init__(self, id_num, ai, colour):
+    def __init__(self, id_num, ai, colour, num_planets, num_probes):
         self.id_num=id_num
         self.ai=ai
         self.colour=colour
+        self.num_planets=num_planets
+        self.num_probes=num_probes
+
+    def add_num_probes(self, num):
+        self.num_probes+=num
+
+    def add_num_planets(self, num):
+        self.num_planets+=num
+
+    def set_num_probes(self, num):
+        self.num_probes=num
+
+    def set_num_planets(self, num):
+        self.num_planets=num
+
+    def get_num_probes(self):
+        return self.num_probes
+
+    def get_num_planets(self):
+        return self.num_planets
+
+    def get_alive(self):
+        if self.get_num_probes()>0:
+            return 1
+        else:
+            return 0
 
     def get_ai(self):
         return self.ai
@@ -261,6 +291,9 @@ class Team(object):
         
     def get_id(self):
         return self.id_num
+
+    def get_points(self):
+        return self.num_probes*PROBE_POINTS+self.num_planets*PLANET_POINTS
 
 class View(object):
     def __init__(self, probe, grid, message_queues):
@@ -322,7 +355,7 @@ class Game(object):
         self.team_colours.append((255,0,255))
         self.team_colours.append((0,255,255))
         self.probe_id_counter=0
-        
+        self.finished=False
         #create grid
         self.grid=[]
         for x in xrange(UNIVERSE_WIDTH):
@@ -372,7 +405,7 @@ class Game(object):
         self.team_list = []
         self.message_queues=[]
         for x in xrange(0, len(ai_list)):
-            self.team_list.append(Team(x, ai_list[x], self.team_colours[x]))
+            self.team_list.append(Team(x, ai_list[x], self.team_colours[x], 1, 1))
             self.message_queues.append([])
         
         #create initial probes
@@ -393,18 +426,39 @@ class Game(object):
         #self.mydisplay.draw_draft()
                 
     def tick(self):
+        #print information
         self.rounds=self.rounds+1
         print "round:  ", self.rounds
-        print "probes: ", len(self.probe_list)
-        #print sum(p.is_populated() for p in self.planet_list)
+        print "probes:"
+        for t in self.team_list:
+            print "    team",t.get_id(),": ",t.get_num_probes()
+        print "    total  : ", len(self.probe_list)
+        print "planets:"
+        for t in self.team_list:
+            print "    team",t.get_id(),": ",t.get_num_planets()
+        print " "
+        
+        #check for end of game
+        num_players=sum(t.get_alive() for t in self.team_list)
+        print num_players
+        if num_players<2:
+            self.finished==True
+            if num_players==0:
+                return 'draw'
+            else:
+                for t in self.team_list:
+                    if t.get_num_probes!=0:
+                        winner=t
+                return winner.get_id()
+        if self.rounds>MAX_ROUNDS:
+            winner_list= sorted(self.team_list, key=lambda team: team.get_points(), reverse=True)
+            return winner_list[0].get_id()
+        
         #resource mining
         for p in self.planet_list:
             if p.is_populated():
                 p.populating_probe().add_resources(p.get_res())
                 
-        #update networks
-        #assign_networks(self.grid, self.probe_list)
-
         #create probe/view list
         view_list=[]
         for p in self.probe_list:
@@ -419,6 +473,7 @@ class Game(object):
             action_list.append((p, reaction['action']))
             if reaction['message']!=None:
                 message_list.append((p, reaction['message']))
+        
         #sort messages
         for i in xrange(len(self.message_queues)):
             self.message_queues[i]=[]
@@ -449,17 +504,19 @@ class Game(object):
             self.grid[k.get_sector()[0]][k.get_sector()[1]]['probes'].remove(k)
             if k.get_landed():
                 self.grid[k.get_sector()[0]][k.get_sector()[1]]['planets'][0].unpopulate()
+                self.team_list[k.get_team().get_id()].add_num_planets(-1)
+            self.team_list[k.get_team().get_id()].add_num_probes(-1)
             self.probe_list.remove(k)
                         
         #colonize planets
         for (p,act) in action_list:
             if act.get_type()==ACT_COLONIZE:
-                #print "ALARM!!!"
                 if len(self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'])==1:
                     if self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].is_populated()==False:
                         self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].populate(p)
                         p.set_pos=p.get_sector
                         p.set_landed(True)
+                        self.team_list[p.get_team().get_id()].add_num_planets(1)
 
         #build new probes
         for (p,act) in action_list:
@@ -472,6 +529,7 @@ class Game(object):
                     self.grid[p.get_sector()[0]][p.get_sector()[1]]['probes'].append(temp_probe)
                     #print self.grid
                     p.pay_probe()
+                    self.team_list[p.get_team().get_id()].add_num_probes(1)
         
         #build new guns
         for (p,act) in action_list:
@@ -641,7 +699,7 @@ class Game(object):
         
         #update display
         self.mydisplay.update(self.planet_list, self.probe_list)
-       
+        return None
             
 def get_ai(name):
     importlib.import_module(name)
@@ -651,13 +709,17 @@ def get_ai(name):
 
 
 def main():
-     global ai_list
-     #print sys.path
-     ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
-     mygame = Game(ai_list)
-
-     while 1:
-         mygame.tick()
+    global ai_list
+    #print sys.path
+    ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
+    mygame = Game(ai_list)
+    winner=None
+    while winner==None:
+        winner=mygame.tick()
+    if winner=='draw':
+        print "Draw!"
+    else:
+        print "The winner is Team ",winner
 
 #background = pygame.Surface((UNIVERSE_WIDTH*SCALE,UNIVERSE_HEIGHT*SCALE))
 #background.fill((0,0,0)
