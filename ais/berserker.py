@@ -25,9 +25,32 @@ class ProbeAi(object):
         else:
             print "Warning, no mission!"
             self.mission='none'
-
+    
     def distance(self, a, b):
-        return (b[0]-a[0], b[1]-a[1])
+        vect=[0,0]
+        if b[0]>a[0]:
+            if b[0]-a[0]<von_neumann.UNIVERSE_WIDTH/2:
+                vect[0]=b[0]-a[0]
+            else:
+                vect[0]=b[0]-a[0]-von_neumann.UNIVERSE_WIDTH
+        else:
+            if a[0]-b[0]<von_neumann.UNIVERSE_WIDTH/2:
+                vect[0]=b[0]-a[0]
+            else:
+                vect[0]=b[0]-a[0]+von_neumann.UNIVERSE_WIDTH
+
+        if b[1]>a[1]:
+            if b[1]-a[1]<von_neumann.UNIVERSE_HEIGHT/2:
+                vect[1]=b[1]-a[1]
+            else:
+                vect[1]=b[1]-a[1]-von_neumann.UNIVERSE_HEIGHT
+        else:
+            if a[1]-b[1]<von_neumann.UNIVERSE_HEIGHT/2:
+                vect[1]=b[1]-a[1]
+            else:
+                vect[1]=b[1]-a[1]+von_neumann.UNIVERSE_HEIGHT
+                
+        return vect
     
     def min_res(self, view):
         p_res=view.cargo['resources']
@@ -148,14 +171,6 @@ class ProbeAi(object):
                     return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.distance(view.pos, closest_empty_planet[0]['pos'])), 'message':None}
             else:
                 #fly in random direction
-                if view.sector[0]==0:
-                    self.direction[0]=random.uniform(0,2)
-                if view.sector[0]==von_neumann.UNIVERSE_WIDTH-1:
-                    self.direction[0]=random.uniform(-2,0)
-                if view.sector[1]==0:
-                    self.direction[1]=random.uniform(0,2)
-                if view.sector[1]==von_neumann.UNIVERSE_HEIGHT-1:
-                    self.direction[1]=random.uniform(-2,0)
                 return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.direction), 'message':None}
         elif self.mission=='transport':
             if self.submission==None:
