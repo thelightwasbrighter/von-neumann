@@ -13,7 +13,7 @@ Each player starts out with one probe on a planet. A landed probe automatically 
 The game either ends when there is a single surviving team, or when the predefined maximum number of rounds have been played. If this is the case the weighted sum of the probes and colonized planets is calculated for each team. The team with the most points wins.
 
 The probes that are in space can move around freely, however there is a maximum velocity.
-The space is divided into a grid of sectors. The truncated coordinates of each probe represent its sector. Certain interactions, such as battle, loading and unloading of cargo can only take place if the participating probes are in the same sector.
+The space is divided into a grid of sectors. The truncated coordinates of each probe represent its sector. Certain interactions, such as colonization or loading and unloading of cargo can only take place if the participating probes are in the same sector.
 
 An instance of ProbeAi is created for each Probe.
 The first instance receives 'initial' as an argument.
@@ -76,7 +76,7 @@ ACT_LOAD/ACT_UNLOAD:
   load/unload resources/guns/armor from/to the probe that is landed on the planet in the sector in which you currently are. If there is no such probe, nothing will happen. A cargo directory is required as an additional argument in order to tell the master program what items you want to load/unload. See below for the structure of a cargo directory.
 
 ACT_ATTACK:
-  attack another probe. The other probe has to be in the same sector for this to work. The additional parameter has to be the probe_id of the enemy probe, which can be acquired from the scans in the view object.
+  attack another probe. The other probe has to be within attack range. The additional parameter has to be the probe_id of the enemy probe, which can be acquired from the scans in the view object.
 
 ACT_MOVE:
   move in a certain direction. This only works if the probe is in space. A two dimensional list(vector) has to be passed as an argument. It represents direction and speed as the same time. If the length exceeds the allowed maximum speed it will automatically be shortened to the maximum length.
@@ -103,7 +103,8 @@ GUN_COST:	  Gun cost
 GUN_SLOTS:	  Number of cargo slots taken by a gun
 ARMOR_COST:	  Armor unit cost
 ARMOR_SLOTS:	  Number of cargo slots taken by an armor unit
-PROBE_RANGE:      Scanner range of a probe
+PROBE_SCAN_RANGE: Scanner range of a probe in sectors
+PROBE_ATTACK_RANGE: Attack range of a probe in sectors
 MAX_SPEED:        maximum distance that can be covered in one round
 MAX_ROUNDS:	  maximum rounds in a game
 PROBE_POINTS:	  points for a probe at the end of the game
