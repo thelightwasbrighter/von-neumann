@@ -129,6 +129,8 @@ class Planet(object):
         self.populated=False
         self.probe=None
     def populate(self, probe):
+        probe.set_pos(copy.copy(self.pos))
+        probe.set_landed(True)
         self.probe=probe
         self.populated=True
     
@@ -163,9 +165,6 @@ class Planet(object):
             pass
 
 class Probe(object):
-    def calc_sector(self):
-        self.sector=[int(math.floor(self.pos[0])), int(math.floor(self.pos[1]))]
-    
     def __init__(self, pos, team, ai, probe_id, cargs):
         self.probe_id=probe_id
         self.pos = pos
@@ -175,7 +174,6 @@ class Probe(object):
         self.cargo={'resources':[0,0,0], 'guns':0, 'armor':0}
         self.free_slots=CARGO_SLOTS
         self.act = self.ai.act
-        self.calc_sector()
         self.network_id=None
     def get_team(self):
         return self.team
@@ -208,13 +206,12 @@ class Probe(object):
             self.pos[1]=UNIVERSE_HEIGHT-1
         elif self.pos[1]<0:
             self.pos[1]=0
-        self.calc_sector()
+    
     def get_pos(self):
         return self.pos
-
+    
     def get_sector(self):
-        self.calc_sector()
-        return self.sector
+        return [int(math.floor(self.pos[0])),int(math.floor(self.pos[1]))]
 
     def pay_probe(self):
         res=self.cargo['resources']
@@ -422,8 +419,8 @@ class Game(object):
             self.probe_list.append(temp_probe)
             self.grid[self.planet_list[x].get_pos()[0]][self.planet_list[x].get_pos()[1]]['probes'].append(temp_probe)
             self.planet_list[x].populate(self.probe_list[x])
-            self.probe_list[x].set_pos(copy.deepcopy(self.planet_list[x].get_pos()))
-            self.probe_list[x].set_landed(True)
+            #self.probe_list[x].set_pos(copy.deepcopy(self.planet_list[x].get_pos()))
+
 
         #generate display
         self.mydisplay = Display(UNIVERSE_WIDTH, UNIVERSE_HEIGHT, SCALE)
@@ -434,15 +431,15 @@ class Game(object):
     def tick(self):
         #print information
         self.rounds=self.rounds+1
-        print "round:  ", self.rounds
-        print "probes:"
-        for t in self.team_list:
-            print "    team",t.get_id(),": ",t.get_num_probes()
-        print "    total  : ", len(self.probe_list)
-        print "planets:"
-        for t in self.team_list:
-            print "    team",t.get_id(),": ",t.get_num_planets()
-        print " "
+        #print "round:  ", self.rounds
+        #print "probes:"
+        #for t in self.team_list:
+        #    print "    team",t.get_id(),": ",t.get_num_probes()
+        #print "    total  : ", len(self.probe_list)
+        #print "planets:"
+        #for t in self.team_list:
+        #    print "    team",t.get_id(),": ",t.get_num_planets()
+        #print " "
         
         #check for end of game
         num_players=sum(t.get_alive() for t in self.team_list)
@@ -511,12 +508,13 @@ class Game(object):
         #remove killed probes
         death_set=set(death_list)
         for k in death_set:
+            k_sector=k.get_sector()
             for action in action_list:
                 if action[0]==k:
                     action_list.remove(action)
-            self.grid[k.get_sector()[0]][k.get_sector()[1]]['probes'].remove(k)
+            self.grid[k_sector[0]][k_sector[1]]['probes'].remove(k)
             if k.get_landed():
-                self.grid[k.get_sector()[0]][k.get_sector()[1]]['planets'][0].unpopulate()
+                self.grid[k_sector[0]][k_sector[1]]['planets'][0].unpopulate()
                 self.team_list[k.get_team().get_id()].add_num_planets(-1)
             self.team_list[k.get_team().get_id()].add_num_probes(-1)
             self.probe_list.remove(k)
@@ -524,11 +522,12 @@ class Game(object):
         #colonize planets
         for (p,act) in action_list:
             if act.get_type()==ACT_COLONIZE:
-                if len(self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'])==1:
-                    if self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].is_populated()==False:
-                        self.grid[p.get_sector()[0]][p.get_sector()[1]]['planets'][0].populate(p)
-                        p.set_pos=p.get_sector
-                        p.set_landed(True)
+                p_sector=p.get_sector()
+                if len(self.grid[p_sector[0]][p_sector[1]]['planets'])==1:
+                    if self.grid[p_sector[0]][p_sector[1]]['planets'][0].is_populated()==False:
+                        self.grid[p_sector[0]][p_sector[1]]['planets'][0].populate(p)
+                        #p.set_pos(p_sector)
+                        #p.set_landed(True)
                         self.team_list[p.get_team().get_id()].add_num_planets(1)
 
         #build new probes
@@ -688,27 +687,30 @@ class Game(object):
         #move probes
         for (p,act) in action_list:
             if act.get_type()==ACT_MOVE:
-                pos=p.get_pos()
-                self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].remove(p)
-                betrag=math.sqrt(math.pow(act.get_data()[0],2)+math.pow(act.get_data()[1],2))
-                if betrag>MAX_SPEED:
-                    pos[0]=pos[0]+MAX_SPEED*act.get_data()[0]/betrag
-                    pos[1]=pos[1]+MAX_SPEED*act.get_data()[1]/betrag
-                else:
-                    pos[0]=pos[0]+act.get_data()[0]
-                    pos[1]=pos[1]+act.get_data()[1]
-                if pos[0]>=UNIVERSE_WIDTH-1:
-                    pos[0]=UNIVERSE_WIDTH-1
-                if pos[0]<0:
-                    pos[0]=0
-                if pos[1]>=UNIVERSE_HEIGHT-1:
-                    pos[1]=UNIVERSE_HEIGHT-1
-                if pos[1]<0:
-                    pos[1]=0
-               
-                p.set_pos(pos)
-                self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].append(p)
+                if p.get_landed()==False:
+                    pos=p.get_pos()
+                    self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].remove(p)
+                    betrag=math.sqrt(math.pow(act.get_data()[0],2)+math.pow(act.get_data()[1],2))
+                    if betrag>MAX_SPEED:
+                        pos[0]=pos[0]+MAX_SPEED*act.get_data()[0]/betrag
+                        pos[1]=pos[1]+MAX_SPEED*act.get_data()[1]/betrag
+                    else:
+                        pos[0]=pos[0]+act.get_data()[0]
+                        pos[1]=pos[1]+act.get_data()[1]
+                    if pos[0]>=UNIVERSE_WIDTH-1:
+                        pos[0]=UNIVERSE_WIDTH-1
+                    if pos[0]<0:
+                        pos[0]=0
+                    if pos[1]>=UNIVERSE_HEIGHT-1:
+                        pos[1]=UNIVERSE_HEIGHT-1
+                    if pos[1]<0:
+                        pos[1]=0
+                    p.set_pos(pos)
+                    self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].append(p)
 
+                else:
+                    print "landed probe attempted to move"
+               
         
         #update display
         if self.mydisplay.update(self.planet_list, self.probe_list)=='quit':
@@ -751,13 +753,13 @@ def play_tournament(num_games):
     print "  | ID | WINS"
     print "-------------"
     for x in xrange(len(sorted_win_table)):
-        print x,"| ", sorted_win_table[x][0], "|  ",sorted_win_table[x][1]
+        print x+1,"| ", sorted_win_table[x][0], "|  ",sorted_win_table[x][1]
     print "-------------"
 
 def main():
     global ai_list
     #print sys.path
-    print sys.argv
+    #print sys.argv
     tournament=False
     while sys.argv.count('-t')>0:
         tournament=True
