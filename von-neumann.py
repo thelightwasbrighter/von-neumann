@@ -97,6 +97,9 @@ class Display(object):
         self.draft_surface.blit(self.planet_surface, (0,0))
         self.draft_surface.blit(self.probe_surface, (0,0))
         self.set_frame(self.draft_surface)
+        for event in pygame.event.get(): # User did something
+            if event.type == pygame.QUIT: # If user clicked close
+                return('quit')
        
 # Actions available to a probe on each turn.
 ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_BUILD_ARMOR, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_ATTACK, ACT_IDLE = range(9)
@@ -698,7 +701,8 @@ class Game(object):
 
         
         #update display
-        self.mydisplay.update(self.planet_list, self.probe_list)
+        if self.mydisplay.update(self.planet_list, self.probe_list)=='quit':
+            return 'quit'
         return None
             
 def get_ai(name):
@@ -713,7 +717,9 @@ def play_game():
     winner=None
     while winner==None:
         winner=mygame.tick()
-    if winner=='draw':
+    if winner=='quit':
+        return 'quit'
+    elif winner=='draw':
         print "Draw!"
     else:
         print "The winner is Team ",winner
@@ -724,7 +730,9 @@ def play_tournament(num_games):
     win_table=[[x,0] for x in xrange(len(ai_list))]
     for i in xrange(num_games):
         winner=play_game()
-        if winner!='draw':
+        if winner=='quit':
+            return 'quit'
+        elif winner!='draw':
             win_table[winner][1]+=1
     sorted_win_table=sorted(win_table, key=lambda x: x[1], reverse=True)
     print "--------------------"
