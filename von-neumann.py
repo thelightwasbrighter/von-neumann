@@ -30,9 +30,10 @@ ARMOR_SLOTS = 2000
 PROBE_RANGE = 5
 PLANET_RANGE = 5
 MAX_SPEED=0.7
-MAX_ROUNDS = 2000
+MAX_ROUNDS = 500
 PROBE_POINTS = 1
 PLANET_POINTS=20
+DEFAULT_TOURNAMENT_GAMES = 10
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -440,7 +441,6 @@ class Game(object):
         
         #check for end of game
         num_players=sum(t.get_alive() for t in self.team_list)
-        print num_players
         if num_players<2:
             self.finished==True
             if num_players==0:
@@ -708,10 +708,7 @@ def get_ai(name):
     return ai
 
 
-def main():
-    global ai_list
-    #print sys.path
-    ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
+def play_game():
     mygame = Game(ai_list)
     winner=None
     while winner==None:
@@ -720,57 +717,47 @@ def main():
         print "Draw!"
     else:
         print "The winner is Team ",winner
+    return winner
 
-#background = pygame.Surface((UNIVERSE_WIDTH*SCALE,UNIVERSE_HEIGHT*SCALE))
-#background.fill((0,0,0)
 
-    #mydisplay.set_pixel(planet_list[x],(200,200,200))
+def play_tournament(num_games):
+    win_table=[[x,0] for x in xrange(len(ai_list))]
+    for i in xrange(num_games):
+        winner=play_game()
+        if winner!='draw':
+            win_table[winner][1]+=1
+    sorted_win_table=sorted(win_table, key=lambda x: x[1], reverse=True)
+    print "--------------------"
+    print "Tournament results:"
+    print " "
+    print "  | ID | WINS"
+    print "-------------"
+    for x in xrange(len(sorted_win_table)):
+        print x,"| ", sorted_win_table[x][0], "|  ",sorted_win_table[x][1]
+    print "-------------"
 
-#pygame.display.flip()
+def main():
+    global ai_list
+    #print sys.path
+    print sys.argv
+    tournament=False
+    while sys.argv.count('-t')>0:
+        tournament=True
+        t_index=sys.argv.index('-t')
+        try:
+            num_games=int(sys.argv[t_index+1])
+            sys.argv.pop(t_index+1)
+            sys.argv.pop(t_index)
+        except:
+            num_games=DEFAULT_TOURNAMENT_GAMES
+            sys.argv.pop(t_index)
+    
+    ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
+    if tournament==False:
+        play_game()
+    else:
+        play_tournament(num_games)
+
 
 if __name__ == "__main__":
     main()
-    
-
-def assign_networks(grid, probe_list):
-    probe_check=[]
-    id_count=0
-    temp_id=0
-    for n in probe_list:
-        probe_check.append(False)
-    while probe_check.count(False)>0:
-        init_probe=probe_list[probe_check.index(False)]
-        check_grid=[]
-        for x in xrange(UNIVERSE_WIDTH):
-            check_grid.append([])
-            for y in xrange(UNIVERSE_HEIGHT):
-                check_grid[x].append(False)
-        probe_queue=[init_probe]
-        probe_list_temp=[]
-        while len(probe_queue)!=0:
-            #print probe_queue
-            probe_temp=probe_queue.pop()
-            for x in xrange(-PROBE_RANGE,PROBE_RANGE):
-                if probe_temp.get_sector()[0]+x>=0 and probe_temp.get_sector()[0]+x<UNIVERSE_WIDTH:
-                    for y in xrange(-PROBE_RANGE,PROBE_RANGE):
-                        if probe_temp.get_sector()[1]+y>=0 and probe_temp.get_sector()[1]+y<UNIVERSE_HEIGHT:
-                            if check_grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]==False:
-                                for p in grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]['probes']:
-                                    if p.get_team()==probe_temp.get_team():
-                                        if probe_check[probe_list.index(p)]==True:
-                                            for i in xrange(len(probe_list)):
-                                                if probe_check[i]==True:
-                                                    if probe_list[i].get_net_id()==p.get_net_id():
-                                                        probe_list[i].set_net_id(temp_id)
-                                        else:
-                                            probe_list_temp.append(p)
-                                            if p!=probe_temp:
-                                                probe_queue.append(p)
-                                            #check_grid[p.get_sector()[0]][p.get_sector()[1]]=True
-                                check_grid[probe_temp.get_sector()[0]+x][probe_temp.get_sector()[1]+y]=True
-        for p in probe_list_temp:
-            p.set_net_id(temp_id)
-            probe_check[probe_list.index(p)]=True
-        temp_id=temp_id+1
-
-

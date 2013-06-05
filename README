@@ -3,9 +3,10 @@ Requirements:
 	pygame
 
 Usage:
-	./von-neumann.py [ai1] [ai2] ...
+	./von-neumann.py [-t [num_games]] [ai1] [ai2] ...
         
         The AIs have to be placed in the ais/ directory.
+	The -t option starts tournament mode. if num_games is not specified, the standard amount of games is played
 
 Each player starts out with one probe on a planet. A landed probe automatically mines the resources of the planet and can use these to build objects, such as new probes, guns or armor. Once a probe has landed on a planet, it will stay there. It cannot launch back into space. There are three types of resource in this game. If you build items, each of these resources will be used to the same amount. All planets except for the homeworlds only provide two of the three resources. This means, that you have to transport resources between planets in order to use your resources effectively.
 
@@ -103,5 +104,5 @@ PROBE_RANGE:      Scanner range of a probe
 MAX_SPEED:        maximum distance that can be covered in one round
 MAX_ROUNDS:	  maximum rounds in a game
 PROBE_POINTS:	  points for a probe at the end of the game
-PLANET_POINTS	  points for a colonized planet at the end of the game
-
+PLANET_POINTS:	  points for a colonized planet at the end of the game
+DEFAULT_TOURNAMENT_GAMES: Default number of games played in a tournament
