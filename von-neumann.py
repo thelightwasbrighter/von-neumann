@@ -15,9 +15,9 @@ sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 200
-UNIVERSE_HEIGHT = 150
-PLANETS = 40
+UNIVERSE_WIDTH = 300
+UNIVERSE_HEIGHT = 200
+PLANETS = 100
 SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
@@ -394,8 +394,8 @@ class Game(object):
                 
     def tick(self):
         self.rounds=self.rounds+1
-        print "round ", self.rounds
-        #print len(self.probe_list)
+        print "round:  ", self.rounds
+        print "probes: ", len(self.probe_list)
         #print sum(p.is_populated() for p in self.planet_list)
         #resource mining
         for p in self.planet_list:
@@ -438,7 +438,7 @@ class Game(object):
                 if victim!=None:
                     if fight(p,victim):
                         death_list.append(victim)
-                        print "KILL"
+                        #print "KILL"
         
         #remove killed probes
         death_set=set(death_list)

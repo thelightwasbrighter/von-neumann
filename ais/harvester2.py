@@ -1,13 +1,11 @@
 '''
-This probe finds new planets, transports resources, reproduces and attacks opponents
+This probe finds new planets, transports resources and reproduces.
+No fighting at all.
 '''
 
 von_neumann=__import__("von-neumann")
 import math
 import random
-
-NUM_GUNS=1
-NUM_ARMOR=0
 
 class ProbeAi(object):
     
@@ -15,7 +13,6 @@ class ProbeAi(object):
         self.cargs=cargs
         self.direction=None
         self.submission=None
-        self.first=True
         if cargs=='initial':
             self.mission='produce'
         elif cargs=='search':
@@ -95,44 +92,13 @@ class ProbeAi(object):
             
             message={'pos':view.pos, 'need':self.min_res(view), 'have':self.max_res(view)}
             x=random.uniform(0,1)
-            
-	    if view.cargo['guns']<NUM_GUNS:
-                return {'action':von_neumann.Action(von_neumann.ACT_BUILD_GUN), 'message':message}
-
-            if view.cargo['armor']<NUM_ARMOR:
-                return {'action':von_neumann.Action(von_neumann.ACT_BUILD_ARMOR), 'message':message}
-
-	    if x<0.5 or len(view.messages)<4:
+            if x<0.5 or len(view.messages)<4:
                 #produce searcher
                 return {'action':von_neumann.Action(von_neumann.ACT_BUILD_PROBE, 'search'), 'message':message}
             else:
                 #procuce transporter
                 return {'action':von_neumann.Action(von_neumann.ACT_BUILD_PROBE, 'transport'), 'message':message}
-
-        elif self.first==True:
-            self.first=False
-            return {'action':von_neumann.Action(von_neumann.ACT_LOAD, {'resources':[0,0,0], 'guns':NUM_GUNS, 'armor':NUM_ARMOR}), 'message':None}
-            
-        else:
-            #search for enemys and attack
-            min_enemy_dist=99999
-            enemy_found=False
-            closest_enemy=None
-            for probe in view.scans['probes']:
-                if probe['team_id']!=view.team_id:
-                    enemy_found=True
-                    dis=self.betrag(self.distance(view.pos, probe['pos']))
-                    if dis<min_enemy_dist:
-                        min_enemy_dist=dis
-                        closest_enemy=probe
-            if enemy_found:
-                if closest_enemy['sector']==view.sector:
-                    #print "You are Doomed!!!"
-                    return {'action':von_neumann.Action(von_neumann.ACT_ATTACK, closest_enemy['probe_id']), 'message':None}
-                else:
-                    return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.distance(view.pos, closest_enemy['pos'])), 'message':None}
-
-        if self.mission=='search':
+        elif self.mission=='search':
             if self.direction==None:
                 self.direction=[random.uniform(-2,2),random.uniform(-2,2)]
             closest_empty_planet=(None,100)
