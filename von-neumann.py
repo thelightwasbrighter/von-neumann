@@ -34,6 +34,8 @@ MAX_ROUNDS = 2000
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
+DEBUG_AI=True
+
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -472,7 +474,15 @@ class Game(object):
         action_list = []
         message_list = []
         for (p,v) in view_list:
-            reaction=p.act(v)
+            if DEBUG_AI:
+                reaction=p.act(v)
+            else:
+                try:
+                    reaction=p.act(v)
+                except:
+                    print "The ai of team",p.get_team().get_id(),"caused an error!"
+                    reaction={'action':Action(ACT_IDLE), 'message':None} 
+            
             action_list.append((p, reaction['action']))
             if reaction['message']!=None:
                 message_list.append((p, reaction['message']))

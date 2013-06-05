@@ -53,7 +53,7 @@ View contains following information:
       'probe_id' probe's probe_id
 
   messages:
-    All messages that were sent by probes of the probes team last round in a list
+    All messages that were sent by probes of the probe's team last round in a list
 
 
 The act method has to return a directory with two entries: 'action' and 'message'. The 'action' entry has to contain an object of the Action type (see below). The 'message' entry can contain anything you'd like to broadcast to your teammembers.
@@ -106,3 +106,4 @@ MAX_ROUNDS:	  maximum rounds in a game
 PROBE_POINTS:	  points for a probe at the end of the game
 PLANET_POINTS:	  points for a colonized planet at the end of the game
 DEFAULT_TOURNAMENT_GAMES: Default number of games played in a tournament
+DEBUG_AI:         if this value is true, errors in the ai will cause the program to crash. If it is false, an error in the ai will lead to the probe doing nothing
