@@ -28,8 +28,8 @@ GUN_COST = 250
 GUN_SLOTS = 2000
 ARMOR_COST = 250
 ARMOR_SLOTS = 2000
-PROBE_RANGE = 5
-PLANET_RANGE = 5
+PROBE_SCAN_RANGE = 5
+PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
 MAX_ROUNDS = 1350
 PROBE_POINTS = 1
@@ -302,8 +302,8 @@ class View(object):
         self.sector=[int(math.floor(self.pos[0])),int(math.floor(self.pos[1]))]
         self.scans = {'planets':[], 'probes':[]}
         self.probe_id = probe.get_id()
-        for x in xrange(-PROBE_RANGE,PROBE_RANGE):
-            for y in xrange(-PROBE_RANGE,PROBE_RANGE):
+        for x in xrange(-PROBE_SCAN_RANGE,PROBE_SCAN_RANGE+1):
+            for y in xrange(-PROBE_SCAN_RANGE,PROBE_SCAN_RANGE+1):
                 if self.sector[0]+x<0:
                     x+=UNIVERSE_WIDTH
                 elif self.sector[0]+x>UNIVERSE_WIDTH-1:
@@ -501,11 +501,25 @@ class Game(object):
         for (p,act) in action_list:
             if act.get_type()==ACT_ATTACK:
                 victim_id=act.get_data()
-                probes=self.grid[p.get_sector()[0]][p.get_sector()[1]]['probes']
+                p_sector=p.get_sector()
+                probes=[]
                 victim=None
-                for pp in probes:
-                    if pp.get_id()==victim_id:
-                        victim=pp
+                for x in xrange(-PROBE_ATTACK_RANGE,PROBE_ATTACK_RANGE+1):
+                    for y in xrange(-PROBE_ATTACK_RANGE,PROBE_ATTACK_RANGE+1):
+                        if p_sector[0]+x<0:
+                            x+=UNIVERSE_WIDTH
+                        elif p_sector[0]+x>UNIVERSE_WIDTH-1:
+                            x-=UNIVERSE_WIDTH
+                        if p_sector[1]+y<0:
+                            y+=UNIVERSE_HEIGHT
+                        elif p_sector[1]+y>UNIVERSE_HEIGHT-1:
+                            y-=UNIVERSE_HEIGHT
+                        probes.append(self.grid[p_sector[0]+x][p_sector[1]+y]['probes'])
+
+                for px in probes:
+                    for pp in px:
+                        if pp.get_id()==victim_id:
+                            victim=pp
                 if victim!=None:
                     if fight(p,victim):
                         death_list.append(victim)

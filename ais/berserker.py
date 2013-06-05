@@ -149,7 +149,7 @@ class ProbeAi(object):
                         min_enemy_dist=dis
                         closest_enemy=probe
             if enemy_found:
-                if closest_enemy['sector']==view.sector:
+                if abs(closest_enemy['sector'][0]-view.sector[0])<=1 and abs(closest_enemy['sector'][1]-view.sector[1])<=1:
                     #print "You are Doomed!!!"
                     return {'action':von_neumann.Action(von_neumann.ACT_ATTACK, closest_enemy['probe_id']), 'message':None}
                 else:
