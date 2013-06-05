@@ -431,15 +431,15 @@ class Game(object):
     def tick(self):
         #print information
         self.rounds=self.rounds+1
-        #print "round:  ", self.rounds
-        #print "probes:"
-        #for t in self.team_list:
-        #    print "    team",t.get_id(),": ",t.get_num_probes()
-        #print "    total  : ", len(self.probe_list)
-        #print "planets:"
-        #for t in self.team_list:
-        #    print "    team",t.get_id(),": ",t.get_num_planets()
-        #print " "
+        print "round:  ", self.rounds
+        print "probes:"
+        for t in self.team_list:
+            print "    team",t.get_id(),": ",t.get_num_probes()
+        print "    total  : ", len(self.probe_list)
+        print "planets:"
+        for t in self.team_list:
+            print "    team",t.get_id(),": ",t.get_num_planets()
+        print " "
         
         #check for end of game
         num_players=sum(t.get_alive() for t in self.team_list)
