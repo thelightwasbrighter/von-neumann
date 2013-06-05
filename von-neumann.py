@@ -321,8 +321,8 @@ class View(object):
 def fight(attacker, victim):
     if attacker.get_landed():
         if attacker.get_cargo()['guns']>0:
-            if attacker.get_cargo()['guns']>=int(math.floor(CARGO_SLOTS/GUN_SLOTS)):
-                attack_bonus=int(math.floor(CARGO_SLOTS/GUN_SLOTS))
+            if attacker.get_cargo()['guns']>=4:
+                attack_bonus=4
             else:
                 attack_bonus=attacker.get_cargo()['guns']
         else:
@@ -334,8 +334,8 @@ def fight(attacker, victim):
             return False
 
     if victim.get_landed():
-        if victim.get_cargo()['armor']>=int(math.floor(CARGO_SLOTS/ARMOR_SLOTS)):
-            defense_bonus=int(math.floor(CARGO_SLOTS/ARMOR_SLOTS))
+        if victim.get_cargo()['armor']>=8:
+            defense_bonus=8
         else:
             defense_bonus=victim.get_cargo()['armor']
     else:
