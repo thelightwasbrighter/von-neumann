@@ -525,7 +525,6 @@ class Game(object):
                         death_list.append(victim)
                         #print "KILL"
         
-        #send death messages
                         
         #remove killed probes
         death_set=set(death_list)
@@ -538,8 +537,7 @@ class Game(object):
                 if p==k:
                     death_message=k.death_message(v)
                     if death_message!=None:
-                        #self.message_list.append((k, death_message))
-                        pass
+                        self.message_list.append((k, death_message))
                     break
             for action in action_list:
                 if action[0]==k:
