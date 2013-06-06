@@ -74,3 +74,6 @@ class ProbeAi(object):
                     else:
 
                         return {'action':von_neumann.Action(von_neumann.ACT_MOVE, dist), 'message':None}
+
+    def death_message(self, view):
+        return 'death'

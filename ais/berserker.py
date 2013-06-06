@@ -201,3 +201,5 @@ class ProbeAi(object):
         else:
             print "Warning, no mission!"
         
+    def death_message(self, view):
+        return None

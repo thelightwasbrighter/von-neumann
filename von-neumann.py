@@ -31,7 +31,7 @@ ARMOR_SLOTS = 2000
 PROBE_SCAN_RANGE = 5
 PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
-MAX_ROUNDS = 1350
+MAX_ROUNDS = 1250
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -176,6 +176,7 @@ class Probe(object):
         self.cargo={'resources':[0,0,0], 'guns':0, 'armor':0}
         self.free_slots=CARGO_SLOTS
         self.act = self.ai.act
+        self.death_message=self.ai.death_message
         self.network_id=None
     def get_team(self):
         return self.team
@@ -491,11 +492,6 @@ class Game(object):
             if reaction['message']!=None:
                 message_list.append((p, reaction['message']))
         
-        #sort messages
-        for i in xrange(len(self.message_queues)):
-            self.message_queues[i]=[]
-        for (p,m) in message_list:
-            self.message_queues[p.get_team().get_id()].append(m)
                 
         #fight
         death_list=[]
@@ -526,10 +522,18 @@ class Game(object):
                         death_list.append(victim)
                         #print "KILL"
         
+        #send death messages
+                        
         #remove killed probes
         death_set=set(death_list)
         for k in death_set:
             k_sector=k.get_sector()
+            for (p,v) in self.view_list:
+                if p==k:
+                    death_message=k.death_message(v)
+                    if death_message!=None:
+                        message_list.append((k, death_message))
+                    break
             for action in action_list:
                 if action[0]==k:
                     action_list.remove(action)
@@ -540,6 +544,13 @@ class Game(object):
             self.team_list[k.get_team().get_id()].add_num_probes(-1)
             self.probe_list.remove(k)
                         
+        #sort messages
+        for i in xrange(len(self.message_queues)):
+            self.message_queues[i]=[]
+        for (p,m) in message_list:
+            self.message_queues[p.get_team().get_id()].append(m)
+        
+
         #colonize planets
         for (p,act) in action_list:
             if act.get_type()==ACT_COLONIZE:
