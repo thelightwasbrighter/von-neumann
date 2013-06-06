@@ -18,6 +18,8 @@ class ProbeAi(object):
         return math.sqrt(math.pow(vect[0],2)+math.pow(vect[1],2))
 
     def act(self, view):
+        for m in view.messages:
+            print m
         if view.landed:
             res=view.cargo['resources']
             guns=view.cargo['guns']

@@ -17,9 +17,9 @@ sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 210
-UNIVERSE_HEIGHT = 210
-PLANETS = 100
+UNIVERSE_WIDTH = 200
+UNIVERSE_HEIGHT = 200
+PLANETS = 10
 SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
@@ -38,6 +38,7 @@ DEFAULT_TOURNAMENT_GAMES = 10
 DEBUG_AI=True
 MAXIMUM_STATION_GUNS = 4
 MAXIMUM_STATION_ARMOR = 8
+LIVE_STATS=False
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -315,8 +316,8 @@ class View(object):
                     y-=UNIVERSE_HEIGHT
                 for planet in grid[self.sector[0]+x][self.sector[1]+y]['planets']:
                     self.scans['planets'].append(planet.scanned())
-                for probe in grid[self.sector[0]+x][self.sector[1]+y]['probes']:
-                    self.scans['probes'].append(probe.scanned())
+                for p in grid[self.sector[0]+x][self.sector[1]+y]['probes']:
+                    self.scans['probes'].append(p.scanned())
         self.messages=message_queues[probe.get_team().get_id()]
 
 def fight(attacker, victim):
@@ -432,21 +433,23 @@ class Game(object):
         #self.draw_planets()
         #self.mydisplay.draw_draft()
     
-    def append_view(self, planet):
-        self.view_list.append((planet, copy.deepcopy(View(planet,self.grid, self.message_queues))))
+    def append_view(self, probe):
+        view=View(probe,self.grid, self.message_queues)
+        self.view_list.append((probe, copy.deepcopy(view)))
         
     def tick(self):
-        #print information
         self.rounds=self.rounds+1
-        print "round:  ", self.rounds
-        print "probes:"
-        for t in self.team_list:
-            print "    team",t.get_id(),": ",t.get_num_probes()
-        print "    total  : ", len(self.probe_list)
-        print "planets:"
-        for t in self.team_list:
-            print "    team",t.get_id(),": ",t.get_num_planets()
-        print " "
+        if LIVE_STATS:
+            #print information
+            print "round:  ", self.rounds
+            print "probes:"
+            for t in self.team_list:
+                print "    team",t.get_id(),": ",t.get_num_probes()
+            print "    total  : ", len(self.probe_list)
+            print "planets:"
+            for t in self.team_list:
+                print "    team",t.get_id(),": ",t.get_num_planets()
+            print " "
         
         #check for end of game
         num_players=sum(t.get_alive() for t in self.team_list)
@@ -472,11 +475,10 @@ class Game(object):
         self.view_list=[]
         for p in self.probe_list:
             self.append_view(p)
-                    
 
         #create action and message list
         action_list = []
-        message_list = []
+        self.message_list = []
         for (p,v) in self.view_list:
             if DEBUG_AI:
                 reaction=p.act(v)
@@ -490,7 +492,8 @@ class Game(object):
                 reaction={'action':Action(ACT_IDLE), 'message':None} 
             action_list.append((p, reaction['action']))
             if reaction['message']!=None:
-                message_list.append((p, reaction['message']))
+                self.message_list.append((p, reaction['message']))
+            
         
                 
         #fight
@@ -528,26 +531,33 @@ class Game(object):
         death_set=set(death_list)
         for k in death_set:
             k_sector=k.get_sector()
+            for (p,m) in self.message_list:
+                if p==k:
+                    self.message_list.remove((p,m))
             for (p,v) in self.view_list:
                 if p==k:
                     death_message=k.death_message(v)
                     if death_message!=None:
-                        message_list.append((k, death_message))
+                        #self.message_list.append((k, death_message))
+                        pass
                     break
             for action in action_list:
                 if action[0]==k:
                     action_list.remove(action)
+            
             self.grid[k_sector[0]][k_sector[1]]['probes'].remove(k)
             if k.get_landed():
                 self.grid[k_sector[0]][k_sector[1]]['planets'][0].unpopulate()
                 self.team_list[k.get_team().get_id()].add_num_planets(-1)
             self.team_list[k.get_team().get_id()].add_num_probes(-1)
             self.probe_list.remove(k)
+        
                         
         #sort messages
         for i in xrange(len(self.message_queues)):
             self.message_queues[i]=[]
-        for (p,m) in message_list:
+
+        for (p,m) in self.message_list:
             self.message_queues[p.get_team().get_id()].append(m)
         
 
