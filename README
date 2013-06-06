@@ -81,6 +81,9 @@ ACT_ATTACK:
 ACT_MOVE:
   move in a certain direction. This only works if the probe is in space. A two dimensional list(vector) has to be passed as an argument. It represents direction and speed as the same time. If the length exceeds the allowed maximum speed it will automatically be shortened to the maximum length.
 
+ACT_COLONIZE
+  colonize the planet in the current sector. This only works if the planet is not already populated by another probe.
+
 ACT_IDLE:
   Do nothing
 
