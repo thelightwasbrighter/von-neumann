@@ -59,7 +59,7 @@ View contains following information:
     All messages that were sent by probes of the probe's team last round in a list
 
 
-The act method has to return a directory with two entries: 'action' and 'message'. The 'action' entry has to contain an object of the Action type (see below). The 'message' entry can contain anything you'd like to broadcast to your teammembers.
+The act method should return a directory with two entries: 'action' and 'message'. The 'action' entry has to contain an object of the Action type (see below). The 'message' entry can contain anything you'd like to broadcast to your teammembers.
 
 The Action conctructor has to receive one of the following keywords, defined in von-neumann module: ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_BUILD_ARMOR, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_ATTACK, ACT_IDLE. Some of these keywords require an additional argument, which you also have to pass to the Action constructor. The build actions can only be executed by landed probes. The colonize, load and unload actions only by not landed 
 
@@ -91,6 +91,9 @@ The Cargo Directory:
 If you have guns in your cargo room it improves your chances of destroying an enemy you attack. If you have armor in your cargo room it improves your chances of surviving an attack.
 
 A probes cargoroom that is in space is limited to the constant CARGO_SLOTS. Once a probe has landed the cargo space is unlimited, however only a limited ammount of guns and armor will be used in a battle.
+
+If a probe is killed in battle, it can send out a death message which is sent like any other message to all team members. If the probe is killed, the function death_message is called and the view of the probe is passed into it. The return value is the message that will be broadcasted.
+
 
 The following constants define the game:
 UNIVERSE_WIDTH:   width of the universe
