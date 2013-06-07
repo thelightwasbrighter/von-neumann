@@ -388,7 +388,8 @@ class ProbeAi(object):
         self.master_message.message_type=MSG_MASTER
         self.planet_map.empty_planets_by_distance(self.view.pos)
 
-        #print len(self.colony_table.colony_list)
+        if self.view.team_id==0:
+            print len(self.colony_table.colony_list)
         
         #update_colonies
         self.colony_table.update_colonies(self.view.messages)
