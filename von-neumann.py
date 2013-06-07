@@ -20,9 +20,9 @@ sys.path.reverse()
 
    
 
-UNIVERSE_WIDTH = 200
-UNIVERSE_HEIGHT = 200
-PLANETS = 250
+UNIVERSE_WIDTH = 160
+UNIVERSE_HEIGHT = 160
+PLANETS = 150
 SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
@@ -34,7 +34,7 @@ ARMOR_SLOTS = 2000
 PROBE_SCAN_RANGE = 5
 PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
-MAX_ROUNDS = 1250
+MAX_ROUNDS = 1300
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -423,10 +423,11 @@ class VideoPlayer(object):
         #self.mydisplay.draw_draft()
     
     def play(self):
-        for snapshot in self.recording.snapshot_list:
-            #update display
-            if self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)=='quit':
-                return None
+        while 1:
+            for snapshot in self.recording.snapshot_list:
+                #update display
+                if self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)=='quit':
+                    return None
         return None
         
 
@@ -860,10 +861,10 @@ class Game(object):
             recording_probe_list=[]
             recording_planet_list=[]
             for probe in self.probe_list:
-                recording_probe_list.append([probe.get_sector(), probe.get_team().get_id()])
+                recording_probe_list.append([probe.get_sector()[:], probe.get_team().get_id()])
             for planet in self.planet_list:
                 if planet.is_populated():
-                    recording_planet_list.append([planet.get_sector(), planet.is_populated(), planet.populating_probe().get_team().get_id()])
+                    recording_planet_list.append([planet.get_sector()[:], planet.is_populated(), planet.populating_probe().get_team().get_id()])
                 else:
                     recording_planet_list.append([planet.get_sector(), planet.is_populated()])                 
             #snapshot=Snapshot(self.probe_list, self.planet_list, self.rounds)
