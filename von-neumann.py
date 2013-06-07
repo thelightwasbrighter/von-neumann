@@ -19,7 +19,7 @@ sys.path.reverse()
 
 UNIVERSE_WIDTH = 200
 UNIVERSE_HEIGHT = 200
-PLANETS = 10
+PLANETS = 250
 SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
@@ -38,7 +38,9 @@ DEFAULT_TOURNAMENT_GAMES = 10
 DEBUG_AI=True
 MAXIMUM_STATION_GUNS = 4
 MAXIMUM_STATION_ARMOR = 8
-LIVE_STATS=False
+LIVE_STATS=True
+
+
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -105,6 +107,7 @@ class Display(object):
         for event in pygame.event.get(): # User did something
             if event.type == pygame.QUIT: # If user clicked close
                 return('quit')
+
        
 # Actions available to a probe on each turn.
 ACT_BUILD_PROBE, ACT_BUILD_GUN, ACT_BUILD_ARMOR, ACT_MOVE, ACT_COLONIZE, ACT_LOAD, ACT_UNLOAD, ACT_ATTACK, ACT_IDLE = range(9)
@@ -449,7 +452,7 @@ class Game(object):
             print "planets:"
             for t in self.team_list:
                 print "    team",t.get_id(),": ",t.get_num_planets()
-            print " "
+            
         
         #check for end of game
         num_players=sum(t.get_alive() for t in self.team_list)
@@ -537,6 +540,7 @@ class Game(object):
                 if p==k:
                     death_message=k.death_message(v)
                     if death_message!=None:
+                        #pass
                         self.message_list.append((k, death_message))
                     break
             for action in action_list:
@@ -558,6 +562,11 @@ class Game(object):
         for (p,m) in self.message_list:
             self.message_queues[p.get_team().get_id()].append(m)
         
+
+        if LIVE_STATS:
+            print "message volume:"
+            for t in self.team_list:
+                print "    team",t.get_id(),": ", sys.getsizeof(self.message_queues[t.get_id()])
 
         #colonize planets
         for (p,act) in action_list:
