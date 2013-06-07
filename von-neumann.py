@@ -501,7 +501,7 @@ class Game(object):
         if record:
             self.record=True
             self.recording=Recording(gmtime(), recording_team_list, [UNIVERSE_WIDTH,UNIVERSE_HEIGHT])
-            self.recording_filename='recordings/'+strftime("%m_%d__%H%M%S",self.recording.time)
+            self.recording_filename='recordings/'+strftime("%m_%d__%H%M%S",self.recording.time)+'.vn'
         else:
             self.record=False
 
