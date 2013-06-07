@@ -43,6 +43,14 @@ MAXIMUM_STATION_GUNS = 4
 MAXIMUM_STATION_ARMOR = 8
 LIVE_STATS=True
 
+#team colours
+team_colours=[]
+team_colours.append((255,0,0))
+team_colours.append((0,255,0))
+team_colours.append((0,0,255))
+team_colours.append((255,255,0))
+team_colours.append((255,0,255))
+team_colours.append((0,255,255))
 
 class MapLayer(object):
     def __init__(self, width, height, init=0):
@@ -60,7 +68,7 @@ class MapLayer(object):
         
 
 class Display(object):
-    def __init__(self, width, height, scale=2):
+    def __init__(self, width, height, scale=2, video_mode=False):
         self.background = 0,0,0
         self.width, self.height = width, height
         self.scale = scale
@@ -74,7 +82,7 @@ class Display(object):
         self.probe_surface=pygame.Surface(self.size)
         self.planet_surface.set_colorkey(self.background)
         self.probe_surface.set_colorkey(self.background)
-        
+        self.video_mode=video_mode
     
     def set_frame(self, surface):
         self.screen.blit(surface, (0,0))
@@ -88,27 +96,51 @@ class Display(object):
         self.planet_surface.fill(self.background)
         self.probe_surface.fill(self.background)
         self.draft_surface.unlock()
-        for p in planet_list:
-            if p.is_populated():
-                for x in xrange(0,SCALE):
-                    for y in xrange(0,SCALE):
-                        self.planet_surface.set_at((p.get_pos()[0]*SCALE+x,p.get_pos()[1]*SCALE+y),p.populating_probe().get_team().get_colour())
-            else:
-                for x in xrange(0,SCALE):
-                    for y in xrange(0,SCALE):
-                        self.planet_surface.set_at((SCALE*p.get_pos()[0]+x,SCALE*p.get_pos()[1]+y),(255,255,255))
-        self.planet_surface.unlock()
-        self.probe_surface.unlock()
-        self.draft_surface.lock()
-        for p in probe_list:
-            self.probe_surface.set_at((int(math.floor(p.get_pos()[0]))*SCALE,int(math.floor(p.get_pos()[1]))*SCALE),p.get_team().get_colour())
-        self.draft_surface.unlock()     
-        self.draft_surface.blit(self.planet_surface, (0,0))
-        self.draft_surface.blit(self.probe_surface, (0,0))
-        self.set_frame(self.draft_surface)
-        for event in pygame.event.get(): # User did something
-            if event.type == pygame.QUIT: # If user clicked close
-                return('quit')
+        if self.video_mode:
+            for p in planet_list:
+                if p[1]:
+                    for x in xrange(0,SCALE):
+                        for y in xrange(0,SCALE):
+                            self.planet_surface.set_at((p[0][0]*SCALE+x,p[0][1]*SCALE+y),team_colours[p[2]])
+                else:
+                    for x in xrange(0,SCALE):
+                        for y in xrange(0,SCALE):
+                            self.planet_surface.set_at((SCALE*p[0][0]+x,SCALE*p[0][1]+y),(255,255,255))
+            self.planet_surface.unlock()
+            self.probe_surface.unlock()
+            self.draft_surface.lock()
+            for p in probe_list:
+                self.probe_surface.set_at((int(math.floor(p[0][0]))*SCALE,int(math.floor(p[0][1]))*SCALE),team_colours[p[1]])
+            self.draft_surface.unlock()     
+            self.draft_surface.blit(self.planet_surface, (0,0))
+            self.draft_surface.blit(self.probe_surface, (0,0))
+            self.set_frame(self.draft_surface)
+            for event in pygame.event.get(): # User did something
+                if event.type == pygame.QUIT: # If user clicked close
+                    return('quit')
+
+        else:
+            for p in planet_list:
+                if p.is_populated():
+                    for x in xrange(0,SCALE):
+                        for y in xrange(0,SCALE):
+                            self.planet_surface.set_at((p.get_pos()[0]*SCALE+x,p.get_pos()[1]*SCALE+y),p.populating_probe().get_team().get_colour())
+                else:
+                    for x in xrange(0,SCALE):
+                        for y in xrange(0,SCALE):
+                            self.planet_surface.set_at((SCALE*p.get_pos()[0]+x,SCALE*p.get_pos()[1]+y),(255,255,255))
+            self.planet_surface.unlock()
+            self.probe_surface.unlock()
+            self.draft_surface.lock()
+            for p in probe_list:
+                self.probe_surface.set_at((int(math.floor(p.get_pos()[0]))*SCALE,int(math.floor(p.get_pos()[1]))*SCALE),p.get_team().get_colour())
+            self.draft_surface.unlock()     
+            self.draft_surface.blit(self.planet_surface, (0,0))
+            self.draft_surface.blit(self.probe_surface, (0,0))
+            self.set_frame(self.draft_surface)
+            for event in pygame.event.get(): # User did something
+                if event.type == pygame.QUIT: # If user clicked close
+                    return('quit')
 
        
 # Actions available to a probe on each turn.
@@ -377,18 +409,31 @@ def dump_recording(filename, recording):
     f.close()
     
 
+class VideoPlayer(object):
+    def __init__(self, video_file, fps):
+        self.video_file=video_file
+        self.fps=fps
+        f=gzip.open(self.video_file, 'r')
+        self.recording=pickle.load(f)
+        f.close
+        #generate display
+        self.mydisplay = Display(self.recording.UNI_WIDTH, self.recording.UNI_HEIGHT, SCALE, True)
+        #self.mydisplay.new_draft()
+        #self.draw_planets()
+        #self.mydisplay.draw_draft()
+    
+    def play(self):
+        for snapshot in self.recording.snapshot_list:
+            #update display
+            if self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)=='quit':
+                return None
+        return None
+        
+
 class Game(object):
     def __init__(self, ai_list, record):
         self.rounds=0
         self.ais= [ai[1].ProbeAi for ai in ai_list]
-        #team colours
-        self.team_colours=[]
-        self.team_colours.append((255,0,0))
-        self.team_colours.append((0,255,0))
-        self.team_colours.append((0,0,255))
-        self.team_colours.append((255,255,0))
-        self.team_colours.append((255,0,255))
-        self.team_colours.append((0,255,255))
         self.probe_id_counter=0
         self.finished=False
         #create grid
@@ -444,7 +489,7 @@ class Game(object):
         self.team_list = []
         self.message_queues=[]
         for x in xrange(0, len(ai_list)):
-            self.team_list.append(Team(x, ai_list[x], self.team_colours[x], 1, 1))
+            self.team_list.append(Team(x, ai_list[x], team_colours[x], 1, 1))
             self.message_queues.append([])
         
         
@@ -842,6 +887,11 @@ def get_ai(name):
     return ai
 
 
+def play_video(record_file):
+    videoplayer=VideoPlayer(record_file, 25)
+    return videoplayer.play()
+    
+
 def play_game(record):
     mygame = Game(ai_list,record)
     winner=None
@@ -880,10 +930,19 @@ def main():
     #print sys.argv
     tournament=False
     record=False
+    replay=False
     while sys.argv.count ('--record'):
         record=True
         r_index=sys.argv.index('--record')
         sys.argv.pop(r_index)
+    while sys.argv.count ('--replay'):
+        record=False
+        replay=True
+        r_index=sys.argv.index('--replay')
+        replay_file=sys.argv[r_index+1]
+        sys.argv.pop(r_index+1)
+        sys.argv.pop(r_index)
+   
     while sys.argv.count('-t')>0:
         tournament=True
         t_index=sys.argv.index('-t')
@@ -896,7 +955,9 @@ def main():
             sys.argv.pop(t_index)
     
     ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
-    if tournament==False:
+    if replay:
+        play_video(replay_file)
+    elif tournament==False:
         play_game(record)
     else:
         play_tournament(num_games, record)
