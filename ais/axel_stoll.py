@@ -398,7 +398,7 @@ class ProbeAi(object):
         for p in self.view.scans['planets']:
             planet=Planet(p['pos'],p['res'],p['populated'],p['team_id'])
             self.planet_map.update_planet(planet)
-
+        
         ####handle incoming messages
         for m in self.view.messages:
             if m.message_type!=MSG_MASTER:

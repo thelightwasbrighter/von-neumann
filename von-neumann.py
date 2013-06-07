@@ -4,9 +4,12 @@ import random
 import math
 import sys
 import time
+from time import strftime, gmtime
 import importlib
 import copy
 import pygame, pygame.locals
+import pickle
+import gzip
 #import pp
 
 
@@ -31,7 +34,7 @@ ARMOR_SLOTS = 2000
 PROBE_SCAN_RANGE = 5
 PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
-MAX_ROUNDS = 991250
+MAX_ROUNDS = 1000
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -39,7 +42,6 @@ DEBUG_AI=True
 MAXIMUM_STATION_GUNS = 4
 MAXIMUM_STATION_ARMOR = 8
 LIVE_STATS=True
-
 
 
 class MapLayer(object):
@@ -348,10 +350,35 @@ def fight(attacker, victim):
 
     min_dice_val=10-attack_bonus+defense_bonus
     return random.randint(0,20)>min_dice_val
+class Snapshot(object):
+    def __init__(self, probe_list, planet_list, round_count):
+        self.probe_list=probe_list
+        self.planet_list=planet_list
+        self.round_count=round_count
+
+
+class Recording(object):
+    def __init__(self, time, team_list, universe_size):
+        self.time=time
+        self.team_list=team_list
+        self.UNI_WIDTH=universe_size[0]
+        self.UNI_HEIGHT=universe_size[1]
+        self.snapshot_list=[]
+        self.winner=None
         
+    def add_snapshot(self, snapshot):
+        self.snapshot_list.append(snapshot)
+        #pass
+
+
+def dump_recording(filename, recording):
+    f=gzip.open(filename, 'w')
+    pickle.dump(recording,f)
+    f.close()
+    
 
 class Game(object):
-    def __init__(self, ai_list):
+    def __init__(self, ai_list, record):
         self.rounds=0
         self.ais= [ai[1].ProbeAi for ai in ai_list]
         #team colours
@@ -366,6 +393,7 @@ class Game(object):
         self.finished=False
         #create grid
         self.grid=[]
+
         #self.ppservers = ()
         #self.job_server = pp.Server(ppservers=self.ppservers)
         #print "Starting pp with", self.job_server.get_ncpus(), "workers"
@@ -419,6 +447,19 @@ class Game(object):
             self.team_list.append(Team(x, ai_list[x], self.team_colours[x], 1, 1))
             self.message_queues.append([])
         
+        
+
+        recording_team_list=[]
+        for i in xrange(len(ai_list)):
+            recording_team_list.append([i, ai_list[i][0]])           
+        #create recording
+        if record:
+            self.record=True
+            self.recording=Recording(gmtime(), recording_team_list, [UNIVERSE_WIDTH,UNIVERSE_HEIGHT])
+            self.recording_filename='recordings/'+strftime("%m_%d__%H%M%S",self.recording.time)
+        else:
+            self.record=False
+
         #create initial probes
         self.probe_list = []
         for x in xrange(0, len(ai_list)):
@@ -459,14 +500,23 @@ class Game(object):
         if num_players<2:
             self.finished==True
             if num_players==0:
+                if self.record:
+                    self.recording.winner='draw'
+                    dump_recording(self.recording_filename, self.recording)
                 return 'draw'
             else:
                 for t in self.team_list:
                     if t.get_num_probes!=0:
                         winner=t
+                        if self.record:
+                            self.recording.winner=t
+                            dump_recording(self.recording_filename, self.recording)
                 return winner.get_id()
         if self.rounds>MAX_ROUNDS:
             winner_list= sorted(self.team_list, key=lambda team: team.get_points(), reverse=True)
+            if self.record:
+                self.recording.winner=winner_list[0].get_id()
+                dump_recording(self.recording_filename, self.recording)
             return winner_list[0].get_id()
         
         #resource mining
@@ -759,12 +809,31 @@ class Game(object):
 
                 else:
                     print "landed probe of team",p.get_team().get_id(),  "attempted to move"
+        
+        #record snapshot
+        if self.record:
+            recording_probe_list=[]
+            recording_planet_list=[]
+            for probe in self.probe_list:
+                recording_probe_list.append([probe.get_sector(), probe.get_team().get_id()])
+            for planet in self.planet_list:
+                if planet.is_populated():
+                    recording_planet_list.append([planet.get_sector(), planet.is_populated(), planet.populating_probe().get_team().get_id()])
+                else:
+                    recording_planet_list.append([planet.get_sector(), planet.is_populated()])                 
+            #snapshot=Snapshot(self.probe_list, self.planet_list, self.rounds)
+            snapshot=Snapshot(recording_probe_list, recording_planet_list, self.rounds)
+            self.recording.add_snapshot(snapshot)
                
         
         #update display
         if self.mydisplay.update(self.planet_list, self.probe_list)=='quit':
+            if self.record:
+                dump_recording(self.recording_filename, self.recording)
             return 'quit'
         return None
+        
+            
             
 def get_ai(name):
     importlib.import_module(name)
@@ -773,8 +842,8 @@ def get_ai(name):
     return ai
 
 
-def play_game():
-    mygame = Game(ai_list)
+def play_game(record):
+    mygame = Game(ai_list,record)
     winner=None
     while winner==None:
         winner=mygame.tick()
@@ -787,10 +856,10 @@ def play_game():
     return winner
 
 
-def play_tournament(num_games):
+def play_tournament(num_games, record):
     win_table=[[x,0] for x in xrange(len(ai_list))]
     for i in xrange(num_games):
-        winner=play_game()
+        winner=play_game(record)
         if winner=='quit':
             return 'quit'
         elif winner!='draw':
@@ -810,6 +879,11 @@ def main():
     #print sys.path
     #print sys.argv
     tournament=False
+    record=False
+    while sys.argv.count ('--record'):
+        record=True
+        r_index=sys.argv.index('--record')
+        sys.argv.pop(r_index)
     while sys.argv.count('-t')>0:
         tournament=True
         t_index=sys.argv.index('-t')
@@ -823,9 +897,9 @@ def main():
     
     ai_list = [(n, get_ai(n)) for n in sys.argv[1:]]
     if tournament==False:
-        play_game()
+        play_game(record)
     else:
-        play_tournament(num_games)
+        play_tournament(num_games, record)
 
 
 if __name__ == "__main__":
