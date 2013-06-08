@@ -3,7 +3,7 @@ Requirements:
 	pygame
 
 Usage:
-	./von-neumann.py [--replay recording.vn] [--record] [-t [num_games]] [ai1] [ai2] ...
+	./von-neumann.py [--replay ] [--record] [-t [num_games]] [ai1] [ai2] ...
         
         The AIs have to be placed in the ais/ directory.
 	The -t option starts tournament mode. if num_games is not specified, the standard amount of games is played
