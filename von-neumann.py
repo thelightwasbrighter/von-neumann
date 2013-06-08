@@ -10,15 +10,10 @@ import copy
 import pygame, pygame.locals
 import pickle
 import gzip
-#import pp
-
-
 
 sys.path.reverse()
 sys.path.append(sys.path[len(sys.path)-1]+'/ais')
 sys.path.reverse()
-
-   
 
 UNIVERSE_WIDTH = 160
 UNIVERSE_HEIGHT = 160
@@ -34,7 +29,7 @@ ARMOR_SLOTS = 2000
 PROBE_SCAN_RANGE = 5
 PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
-MAX_ROUNDS = 1300
+MAX_ROUNDS = 600
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -384,9 +379,9 @@ def fight(attacker, victim):
     return random.randint(0,20)>min_dice_val
 class Snapshot(object):
     def __init__(self, probe_list, planet_list, round_count):
-        self.probe_list=probe_list
-        self.planet_list=planet_list
-        self.round_count=round_count
+        self.probe_list=(probe_list)
+        self.planet_list=(planet_list)
+        self.round_count=(round_count)
 
 
 class Recording(object):
@@ -400,14 +395,12 @@ class Recording(object):
         
     def add_snapshot(self, snapshot):
         self.snapshot_list.append(snapshot)
-        #pass
-
+   
 
 def dump_recording(filename, recording):
     f=gzip.open(filename, 'w')
     pickle.dump(recording,f)
     f.close()
-    
 
 class VideoPlayer(object):
     def __init__(self, video_file, fps):
@@ -418,9 +411,6 @@ class VideoPlayer(object):
         f.close
         #generate display
         self.mydisplay = Display(self.recording.UNI_WIDTH, self.recording.UNI_HEIGHT, SCALE, True)
-        #self.mydisplay.new_draft()
-        #self.draw_planets()
-        #self.mydisplay.draw_draft()
     
     def play(self):
         while 1:
@@ -439,10 +429,6 @@ class Game(object):
         self.finished=False
         #create grid
         self.grid=[]
-
-        #self.ppservers = ()
-        #self.job_server = pp.Server(ppservers=self.ppservers)
-        #print "Starting pp with", self.job_server.get_ncpus(), "workers"
         for x in xrange(UNIVERSE_WIDTH):
             self.grid.append([])
             for y in xrange(UNIVERSE_HEIGHT):
@@ -475,7 +461,6 @@ class Game(object):
             planet_temp = Planet([xtemp,ytemp], res)
             self.planet_list.append(planet_temp)
             self.grid[xtemp][ytemp]['planets'].append(planet_temp)
-            #print (planet_temp.get_pos(), planet_temp.get_res())
         
         #set equal resources for all homeworlds
         res_a = random.randint(10,RES_MAX)
@@ -484,7 +469,6 @@ class Game(object):
         res=[res_a,res_b,res_c]
         for x in xrange(0,len(ai_list)):
             self.planet_list[x].set_res(res)    
-            #print self.planet_list[x].get_res()
             
         #team stuff
         self.team_list = []
@@ -492,12 +476,11 @@ class Game(object):
         for x in xrange(0, len(ai_list)):
             self.team_list.append(Team(x, ai_list[x], team_colours[x], 1, 1))
             self.message_queues.append([])
-        
-        
 
         recording_team_list=[]
         for i in xrange(len(ai_list)):
             recording_team_list.append([i, ai_list[i][0]])           
+
         #create recording
         if record:
             self.record=True
@@ -514,14 +497,9 @@ class Game(object):
             self.probe_list.append(temp_probe)
             self.grid[self.planet_list[x].get_pos()[0]][self.planet_list[x].get_pos()[1]]['probes'].append(temp_probe)
             self.planet_list[x].populate(self.probe_list[x])
-            #self.probe_list[x].set_pos(copy.deepcopy(self.planet_list[x].get_pos()))
-
-
+        
         #generate display
         self.mydisplay = Display(UNIVERSE_WIDTH, UNIVERSE_HEIGHT, SCALE)
-        #self.mydisplay.new_draft()
-        #self.draw_planets()
-        #self.mydisplay.draw_draft()
     
     def append_view(self, probe):
         view=View(probe,self.grid, self.message_queues)
@@ -555,13 +533,13 @@ class Game(object):
                     if t.get_num_probes!=0:
                         winner=t
                         if self.record:
-                            self.recording.winner=t
+                            self.recording.winner=copy.copy(t.get_id())
                             dump_recording(self.recording_filename, self.recording)
                 return winner.get_id()
         if self.rounds>MAX_ROUNDS:
             winner_list= sorted(self.team_list, key=lambda team: team.get_points(), reverse=True)
             if self.record:
-                self.recording.winner=winner_list[0].get_id()
+                self.recording.winner=copy.copy(winner_list[0].get_id())
                 dump_recording(self.recording_filename, self.recording)
             return winner_list[0].get_id()
         
@@ -851,7 +829,13 @@ class Game(object):
                     elif pos[1]<0:
                         pos[1]+=UNIVERSE_HEIGHT
                     p.set_pos(pos)
-                    self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].append(p)
+                    try:
+                        self.grid[int(math.floor(p.get_pos()[0]))][int(math.floor(p.get_pos()[1]))]['probes'].append(p)
+                    except:
+                        print p.get_pos()
+                        print pos
+                        while 1:
+                            pass
 
                 else:
                     print "landed probe of team",p.get_team().get_id(),  "attempted to move"
@@ -861,13 +845,12 @@ class Game(object):
             recording_probe_list=[]
             recording_planet_list=[]
             for probe in self.probe_list:
-                recording_probe_list.append([probe.get_sector()[:], probe.get_team().get_id()])
+                recording_probe_list.append([probe.get_sector()[:], copy.copy(probe.get_team().get_id())])
             for planet in self.planet_list:
                 if planet.is_populated():
-                    recording_planet_list.append([planet.get_sector()[:], planet.is_populated(), planet.populating_probe().get_team().get_id()])
+                    recording_planet_list.append([planet.get_sector()[:], copy.copy(planet.is_populated()), copy.copy(planet.populating_probe().get_team().get_id())])
                 else:
-                    recording_planet_list.append([planet.get_sector(), planet.is_populated()])                 
-            #snapshot=Snapshot(self.probe_list, self.planet_list, self.rounds)
+                    recording_planet_list.append([planet.get_sector()[:], copy.copy(planet.is_populated())])                 
             snapshot=Snapshot(recording_probe_list, recording_planet_list, self.rounds)
             self.recording.add_snapshot(snapshot)
                
@@ -927,8 +910,6 @@ def play_tournament(num_games, record):
 
 def main():
     global ai_list
-    #print sys.path
-    #print sys.argv
     tournament=False
     record=False
     replay=False
