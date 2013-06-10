@@ -15,9 +15,9 @@ sys.path.reverse()
 sys.path.append(sys.path[len(sys.path)-1]+'/ais')
 sys.path.reverse()
 
-UNIVERSE_WIDTH = 160
+UNIVERSE_WIDTH = 200
 UNIVERSE_HEIGHT = 160
-PLANETS = 150
+PLANETS = 160
 SCALE = 3
 RES_MAX = 100
 CARGO_SLOTS = 10000
@@ -29,7 +29,7 @@ ARMOR_SLOTS = 2000
 PROBE_SCAN_RANGE = 5
 PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
-MAX_ROUNDS = 600
+MAX_ROUNDS = 1350
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -637,10 +637,10 @@ class Game(object):
             self.message_queues[p.get_team().get_id()].append(m)
         
 
-        if LIVE_STATS:
-            print "message volume:"
-            for t in self.team_list:
-                print "    team",t.get_id(),": ", sys.getsizeof(self.message_queues[t.get_id()])
+        #if LIVE_STATS:
+            #print "message volume:"
+            #for t in self.team_list:
+            #    print "    team",t.get_id(),": ", sys.getsizeof(self.message_queues[t.get_id()])
 
         #colonize planets
         for (p,act) in action_list:
@@ -820,13 +820,13 @@ class Game(object):
                     else:
                         pos[0]=pos[0]+act.get_data()[0]
                         pos[1]=pos[1]+act.get_data()[1]
-                    if pos[0]>=UNIVERSE_WIDTH:
+                    if math.floor(pos[0])>=UNIVERSE_WIDTH:
                         pos[0]-=UNIVERSE_WIDTH
-                    elif pos[0]<0:
+                    elif math.floor(pos[0])<0:
                         pos[0]+=UNIVERSE_WIDTH
-                    if pos[1]>=UNIVERSE_HEIGHT:
+                    if math.floor(pos[1])>=UNIVERSE_HEIGHT:
                         pos[1]-=UNIVERSE_HEIGHT
-                    elif pos[1]<0:
+                    elif math.floor(pos[1])<0:
                         pos[1]+=UNIVERSE_HEIGHT
                     p.set_pos(pos)
                     try:
