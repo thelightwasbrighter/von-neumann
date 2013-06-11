@@ -432,7 +432,7 @@ class VideoPlayer(object):
     def play(self):
         index=0
         max_i=len(self.recording.snapshot_list)
-        pause=False
+        pause=True
         time_old=0.0
         while 1:
             time_new=time.time()
