@@ -37,6 +37,8 @@ DEBUG_AI=True
 MAXIMUM_STATION_GUNS = 4
 MAXIMUM_STATION_ARMOR = 8
 LIVE_STATS=False
+VIDEO_MAX_FPS=60
+VIDEO_MIN_FPS=0.5
 
 #team colours
 team_colours=[]
@@ -99,6 +101,10 @@ class Display(object):
                     return 'right_arrow'
                 elif event.key==276: #left arrow
                     return 'left_arrow'
+                elif event.key==43:
+                    return 'inc_fps'
+                elif event.key==45:
+                    return 'dec_fps'
 
     def update(self, planet_list, probe_list):
         self.draft_surface.lock()
@@ -415,19 +421,21 @@ def dump_recording(filename, recording):
 class VideoPlayer(object):
     def __init__(self, video_file, fps):
         self.video_file=video_file
-        self.fps=fps
+        self.interval=1.0/fps
+        self.max_interval=1.0/VIDEO_MIN_FPS
+        self.min_interval=1.0/VIDEO_MAX_FPS
         f=gzip.open(self.video_file, 'r')
         self.recording=pickle.load(f)
         f.close
         #generate display
         self.mydisplay = Display(self.recording.UNI_WIDTH, self.recording.UNI_HEIGHT, SCALE, True)
-    
     def play(self):
         index=0
         max_i=len(self.recording.snapshot_list)
         pause=False
+        time_old=0.0
         while 1:
-            #update display
+            time_new=time.time()
             event=self.mydisplay.get_event()
             if event=='quit':
                 sys.exit()
@@ -444,14 +452,25 @@ class VideoPlayer(object):
                 index+=1
                 if index>=max_i:
                     index=0
-           
+            elif event=='inc_fps':
+                if self.interval>self.min_interval:
+                    self.interval/=1.2
+                    if self.interval<self.min_interval:
+                        self.interval=self.min_interval
+            elif event=='dec_fps':
+                 if self.interval<self.max_interval:
+                    self.interval*=1.2
+                    if self.interval>self.max_interval:
+                        self.interval=self.max_interval
             else:
-                snapshot = self.recording.snapshot_list[index]
-                self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)
-                if not pause:
-                    index+=1
-                    if index>=max_i:
-                        index=0
+                if time_new-time_old>=self.interval:
+                    snapshot = self.recording.snapshot_list[index]
+                    self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)
+                    if not pause:
+                        index+=1
+                        if index>=max_i:
+                            index=0
+                    time_old=time_new
         return None
         
 
@@ -891,7 +910,7 @@ class Game(object):
         
         #update display
         self.mydisplay.update(self.planet_list, self.probe_list)
-        event=self.mydisplay.get_event
+        event=self.mydisplay.get_event()
         if event=='quit':
             if self.record:
                 dump_recording(self.recording_filename, self.recording)
