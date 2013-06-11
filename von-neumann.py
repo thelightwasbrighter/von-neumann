@@ -36,7 +36,7 @@ DEFAULT_TOURNAMENT_GAMES = 10
 DEBUG_AI=True
 MAXIMUM_STATION_GUNS = 4
 MAXIMUM_STATION_ARMOR = 8
-LIVE_STATS=True
+LIVE_STATS=False
 
 #team colours
 team_colours=[]
@@ -83,6 +83,23 @@ class Display(object):
         self.screen.blit(surface, (0,0))
         pygame.display.flip()
     
+    def get_event(self):
+        for event in pygame.event.get(): # User did something
+            if event.type == pygame.QUIT: # If user clicked close
+                return 'quit'
+            elif event.type==pygame.KEYUP:
+                print event.key
+                if event.key==113: #q
+                    return 'quit'
+                elif event.key==32: #SPACE
+                    return 'playpause'
+                elif event.key==118: #v
+                    return 'stop'
+                elif event.key==275: # right arrow
+                    return 'right_arrow'
+                elif event.key==276: #left arrow
+                    return 'left_arrow'
+
     def update(self, planet_list, probe_list):
         self.draft_surface.lock()
         self.planet_surface.lock()
@@ -110,10 +127,6 @@ class Display(object):
             self.draft_surface.blit(self.planet_surface, (0,0))
             self.draft_surface.blit(self.probe_surface, (0,0))
             self.set_frame(self.draft_surface)
-            for event in pygame.event.get(): # User did something
-                if event.type == pygame.QUIT: # If user clicked close
-                    return('quit')
-
         else:
             for p in planet_list:
                 if p.is_populated():
@@ -133,9 +146,6 @@ class Display(object):
             self.draft_surface.blit(self.planet_surface, (0,0))
             self.draft_surface.blit(self.probe_surface, (0,0))
             self.set_frame(self.draft_surface)
-            for event in pygame.event.get(): # User did something
-                if event.type == pygame.QUIT: # If user clicked close
-                    return('quit')
 
        
 # Actions available to a probe on each turn.
@@ -413,11 +423,35 @@ class VideoPlayer(object):
         self.mydisplay = Display(self.recording.UNI_WIDTH, self.recording.UNI_HEIGHT, SCALE, True)
     
     def play(self):
+        index=0
+        max_i=len(self.recording.snapshot_list)
+        pause=False
         while 1:
-            for snapshot in self.recording.snapshot_list:
-                #update display
-                if self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)=='quit':
-                    return None
+            #update display
+            event=self.mydisplay.get_event()
+            if event=='quit':
+                sys.exit()
+            elif event=='playpause':
+                pause = not pause
+            elif event=='stop':
+                pause=True
+                index=0
+            elif event=='left_arrow' and pause:
+                index-=1
+                if index<0:
+                    index=max_i-1
+            elif event=='right_arrow' and pause:
+                index+=1
+                if index>=max_i:
+                    index=0
+           
+            else:
+                snapshot = self.recording.snapshot_list[index]
+                self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)
+                if not pause:
+                    index+=1
+                    if index>=max_i:
+                        index=0
         return None
         
 
@@ -856,7 +890,9 @@ class Game(object):
                
         
         #update display
-        if self.mydisplay.update(self.planet_list, self.probe_list)=='quit':
+        self.mydisplay.update(self.planet_list, self.probe_list)
+        event=self.mydisplay.get_event
+        if event=='quit':
             if self.record:
                 dump_recording(self.recording_filename, self.recording)
             return 'quit'
@@ -881,9 +917,7 @@ def play_game(record):
     winner=None
     while winner==None:
         winner=mygame.tick()
-    if winner=='quit':
-        return 'quit'
-    elif winner=='draw':
+    if winner=='draw':
         print "Draw!"
     else:
         print "The winner is Team ",winner
@@ -894,9 +928,7 @@ def play_tournament(num_games, record):
     win_table=[[x,0] for x in xrange(len(ai_list))]
     for i in xrange(num_games):
         winner=play_game(record)
-        if winner=='quit':
-            return 'quit'
-        elif winner!='draw':
+        if winner!='draw':
             win_table[winner][1]+=1
     sorted_win_table=sorted(win_table, key=lambda x: x[1], reverse=True)
     print "--------------------"
