@@ -29,7 +29,7 @@ ARMOR_SLOTS = 2000
 PROBE_SCAN_RANGE = 5
 PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
-MAX_ROUNDS = 1350
+MAX_ROUNDS = 1500
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -90,7 +90,7 @@ class Display(object):
             if event.type == pygame.QUIT: # If user clicked close
                 return 'quit'
             elif event.type==pygame.KEYUP:
-                print event.key
+                #print event.key
                 if event.key==113: #q
                     return 'quit'
                 elif event.key==32: #SPACE
