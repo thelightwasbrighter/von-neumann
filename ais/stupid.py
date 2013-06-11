@@ -49,7 +49,7 @@ class ProbeAi(object):
                 for probe in view.scans['probes']:
                     if probe['team_id']!=view.team_id:
                         if probe['sector']==view.sector:
-                            print "RETALLIATION!!!"
+                            #print "RETALLIATION!!!"
                             return {'action':von_neumann.Action(von_neumann.ACT_ATTACK, probe['probe_id']), 'message':None}
                         return {'action':von_neumann.Action(von_neumann.ACT_MOVE, self.distance(view.pos, probe['pos'])), 'message':None}
 
