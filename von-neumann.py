@@ -444,14 +444,24 @@ class VideoPlayer(object):
             elif event=='stop':
                 pause=True
                 index=0
-            elif event=='left_arrow' and pause:
-                index-=1
-                if index<0:
-                    index=max_i-1
-            elif event=='right_arrow' and pause:
-                index+=1
-                if index>=max_i:
-                    index=0
+            elif event=='left_arrow':
+                if pause:
+                    index-=1
+                    if index<0:
+                        index=max_i-1
+                else:
+                    index-=int(3.0/self.interval)
+                    if index<0:
+                        index=0
+            elif event=='right_arrow':
+                if pause:
+                    index+=1
+                    if index>=max_i:
+                        index=0
+                else:
+                    index+=int(3.0/self.interval)
+                    if index>max_i-1:
+                        index=max_i-1
             elif event=='inc_fps':
                 if self.interval>self.min_interval:
                     self.interval/=1.2
@@ -462,15 +472,15 @@ class VideoPlayer(object):
                     self.interval*=1.2
                     if self.interval>self.max_interval:
                         self.interval=self.max_interval
-            else:
-                if time_new-time_old>=self.interval:
-                    snapshot = self.recording.snapshot_list[index]
-                    self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)
-                    if not pause:
-                        index+=1
-                        if index>=max_i:
-                            index=0
-                    time_old=time_new
+            
+            if time_new-time_old>=self.interval:
+                snapshot = self.recording.snapshot_list[index]
+                self.mydisplay.update(snapshot.planet_list, snapshot.probe_list)
+                if not pause:
+                    index+=1
+                    if index>=max_i:
+                        index=max_i-1
+                time_old=time_new
         return None
         
 
