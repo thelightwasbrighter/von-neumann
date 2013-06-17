@@ -14,7 +14,7 @@ Usage:
 	q:	Quit
 	v: 	Stop in replay mode
 	space:	Play/Pause in replay mode
-	+/-:	Increase/Decrease speed in paused replay mode, forward/rewind 3 seconds in playing replay mode
+	up/down:Increase/Decrease speed in paused replay mode, forward/rewind 3 seconds in playing replay mode
 	left:	Step back one round in paused replay mode
 	right:	stop forward one round in paused replay mode 
 
