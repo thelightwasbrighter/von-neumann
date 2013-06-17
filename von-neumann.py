@@ -91,19 +91,19 @@ class Display(object):
                 return 'quit'
             elif event.type==pygame.KEYUP:
                 #print event.key
-                if event.key==113: #q
+                if event.key==pygame.K_q: #q
                     return 'quit'
-                elif event.key==32: #SPACE
+                elif event.key==pygame.K_SPACE: #SPACE
                     return 'playpause'
-                elif event.key==118: #v
+                elif event.key==pygame.K_v: #v
                     return 'stop'
-                elif event.key==275: # right arrow
+                elif event.key==pygame.K_RIGHT: # right arrow
                     return 'right_arrow'
-                elif event.key==276: #left arrow
+                elif event.key==pygame.K_LEFT: #left arrow
                     return 'left_arrow'
-                elif event.key==43:
+                elif event.key==pygame.K_PLUS:
                     return 'inc_fps'
-                elif event.key==45:
+                elif event.key==pygame.K_MINUS:
                     return 'dec_fps'
 
     def update(self, planet_list, probe_list):
