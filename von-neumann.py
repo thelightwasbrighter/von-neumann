@@ -101,9 +101,9 @@ class Display(object):
                     return 'right_arrow'
                 elif event.key==pygame.K_LEFT: #left arrow
                     return 'left_arrow'
-                elif event.key==pygame.K_PLUS:
+                elif event.key==pygame.K_UP:
                     return 'inc_fps'
-                elif event.key==pygame.K_MINUS:
+                elif event.key==pygame.K_DOWN:
                     return 'dec_fps'
 
     def update(self, planet_list, probe_list):
