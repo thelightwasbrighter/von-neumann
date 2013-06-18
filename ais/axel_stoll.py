@@ -4,8 +4,8 @@ import random
 
 SECTORS=N.UNIVERSE_WIDTH*N.UNIVERSE_HEIGHT
 CLOSE_LIMIT=10
-TYP_MASTER, TYP_SCOUT, TYP_COLONIZER, TYP_COLONY = range(4)
-MSG_SCOUT_DEATH, MSG_COLONIZER_DEATH, MSG_CREATION, MSG_MASTER, MSG_SCOUT_MISSION_ASSIGNMENT, MSG_SCOUT_REPORT, MSG_SCOUT_REQ_MISSION, MSG_COLONIZER_MISSION_ASSIGNMENT, MSG_COLONIZER_REQ_MISSION, MSG_COLONIZATION_COMPLETE, MSG_COLONY_REPORT, MSG_COLONY_DEATH= range(12)
+TYP_MASTER, TYP_SCOUT, TYP_COLONIZER, TYP_COLONY, TYP_TRANSPORTER = range(5)
+MSG_SCOUT_DEATH, MSG_COLONIZER_DEATH, MSG_CREATION, MSG_MASTER, MSG_SCOUT_MISSION_ASSIGNMENT, MSG_SCOUT_REPORT, MSG_SCOUT_REQ_MISSION, MSG_COLONIZER_MISSION_ASSIGNMENT, MSG_COLONIZER_REQ_MISSION, MSG_COLONIZATION_COMPLETE, MSG_COLONY_REPORT, MSG_COLONY_DEATH, MSG_TRANSPORTER_REPORT, MSG_TRANSPORTER_MISSION_ASSIGNMENT= range(14)
 
 def probe_buildable(view):
     for i in xrange(3):
@@ -161,7 +161,44 @@ class Message(object):
         self.content=content
         self.sender_id=sender_id
         self.message_type=message_type
-        
+
+class TransportMission(object):
+    def __init__(self, probe_id, start_pos, target_pos):
+        self.probe_id=probe_id
+        self.start_pos=start_pos
+        self.target_pos=target_pos
+        self.submission='to_start'
+
+class TransportTable(object):
+    def __init__(self):
+        self.transport_list=[]
+
+    def add_mission(self, mission):
+        self.transport_list.append(mission)
+   
+    def update_missions(self, messages):
+        self.transport_list=[]
+        for m in messages:
+            if m.message_type==MSG_TRANSPORTER_REPORT:
+                self.transport_list.append(m.content['mission'])
+
+    def get_redundant_missions(self, colony_table):
+        ret_list=[]
+        for m in self.transport_list:
+            colony_exists=False
+            if m.submission=='to_start':
+                for c in colony_table.colony_list:
+                    if c.pos==m.start_pos:
+                        colony_exists=True
+                        break
+            elif m.submission=='to_target':
+                for c in colony_table.colony_list:
+                    if c.pos==m.target_pos:
+                        colony_exists=True
+                        break
+            if colony_exists==False:
+                ret_list.append(m)
+            return ret_list
 
 class ColonizationMission(object):
     def __init__(self, probe_id, target_pos):
@@ -201,6 +238,7 @@ class Colony(object):
         self.pos=pos
         self.planet_res=planet_res
         self.cargo=cargo
+        self.transporters=[]
 
 class ColonyTable(object):
     def __init__(self):
@@ -214,6 +252,22 @@ class ColonyTable(object):
             if c.pos==pos:
                 self.colony_list.remove(c)
                 break
+
+    def update_transporters(self, transport_table):
+        for c in self.colony_list:
+            c.transporters=[]
+        for m in transport_table.transport_list:
+            for c in self.colony_list:
+                if c.pos==m.start_pos:
+                    c.transporters.append(m)
+                    break
+
+    def get_colonies_without_transporters(self):
+        colony_list=[]
+        for c in self.colony_list:
+            if len(c.transporters)==0:
+                colony_list.append(c)
+        return colony_list
 
     def update_colonies(self, messages):
         for m in messages:
@@ -271,11 +325,41 @@ class ProbeAi(object):
             self.scout_count=0
             self.colonizer_count=0
             self.colony_table=ColonyTable()
+            self.transport_table=TransportTable()
         else:
             self.int_id=cargs.receiver_id
             self.typ=cargs.content
             self.mission=None
     
+    def master_build_transporter(self, lonely_colonies):
+        if probe_buildable(self.view):
+            closest_lonely_colony=lonely_colonies[0]
+            closest_dist=self.distance_map.distance[lonely_colonies[0].pos[0]][lonely_colonies[0].pos[1]]
+            for lc in lonely_colonies:
+                if self.distance_map.distance[lc.pos[0]][lc.pos[1]]<closest_dist:
+                    closest_lonely_colony=lc
+                    closest_dist=self.distance_map.distance[lc.pos[0]][lc.pos[1]]
+            transport_mission=TransportMission(self.id_counter, closest_lonely_colony.pos, self.view.pos)
+            self.transport_table.add_mission(transport_mission)
+            create_message=Message()
+            create_message.sender_id=self.int_id
+            create_message.receiver_id=self.id_counter
+            create_message.message_type=MSG_CREATION
+            create_message.content=TYP_TRANSPORTER
+            
+            message=Message()
+            message.sender_id=self.int_id
+            message.receiver_id=self.id_counter
+            message.message_type=MSG_TRANSPORTER_MISSION_ASSIGNMENT
+            message.content=transport_mission
+                    
+            self.master_message.content.append(message)
+            self.colonizer_count+=1
+            self.id_counter+=1
+            return {'action':N.Action(N.ACT_BUILD_PROBE, create_message), 'message':self.master_message} 
+
+        return {'action':N.Action(N.ACT_IDLE), 'message':self.master_message}
+
     def master_build_colonizer(self):
         if probe_buildable(self.view):
             closest_empty_planets=self.planet_map.empty_planets_by_distance(self.view.pos)
@@ -386,10 +470,6 @@ class ProbeAi(object):
         self.master_message.sender_id=self.int_id
         self.master_message.content=[]
         self.master_message.message_type=MSG_MASTER
-        self.planet_map.empty_planets_by_distance(self.view.pos)
-
-        if self.view.team_id==0:
-            print len(self.colony_table.colony_list)
         
         #update_colonies
         self.colony_table.update_colonies(self.view.messages)
@@ -398,7 +478,14 @@ class ProbeAi(object):
         for p in self.view.scans['planets']:
             planet=Planet(p['pos'],p['res'],p['populated'],p['team_id'])
             self.planet_map.update_planet(planet)
-        
+
+        #update transport list
+        self.transport_table.update_missions(self.view.messages)
+        #update colony table transporters
+        self.colony_table.update_transporters(self.transport_table)
+        #get colonies without transporter
+        lonely_colonies=self.colony_table.get_colonies_without_transporters()
+
         ####handle incoming messages
         for m in self.view.messages:
             if m.message_type!=MSG_MASTER:
@@ -406,7 +493,7 @@ class ProbeAi(object):
                 for p in m.content['scans']['planets']:
                     planet=Planet(p['pos'],p['res'],p['populated'],p['team_id'])
                     self.planet_map.update_planet(planet)
-            if m.message_type==MSG_SCOUT_REPORT or m.message_type==MSG_SCOUT_REQ_MISSION:
+            if m.message_type==MSG_SCOUT_REPORT or m.message_type==MSG_SCOUT_REQ_MISSION or m.message_type==MSG_TRANSPORTER_REPORT:
                 #update known map
                 self.update_known_map(m)
             if m.message_type==MSG_SCOUT_REQ_MISSION:
@@ -473,11 +560,56 @@ class ProbeAi(object):
         if self.scout_count<3:
             return self.master_build_scout()
         
+        if len(lonely_colonies)!=0:
+            return self.master_build_transporter(lonely_colonies)
+
         return self.master_build_colonizer()
             
         return {'action':N.Action(N.ACT_IDLE), 'message':self.master_message}
 
         
+    def act_transporter(self):
+        message=Message()
+        message.sender_id=self.int_id
+        message.content={'sector':self.view.sector, 'scans':self.view.scans, 'mission':None}
+        message.message_type=MSG_TRANSPORTER_REPORT
+        #handle messages
+        for m in self.view.messages:
+             if m.message_type==MSG_MASTER:
+                 for mm in m.content:
+                    if mm.receiver_id==self.int_id and mm.message_type==MSG_TRANSPORTER_MISSION_ASSIGNMENT:
+                        self.mission=mm.content
+        message.content['mission']=self.mission
+                        
+        if self.mission.submission=='to_start':
+            if self.view.sector==self.mission.start_pos:
+                self.mission.submission='to_target'
+                load_res=[N.CARGO_SLOTS/3,N.CARGO_SLOTS/3,N.CARGO_SLOTS/3]
+                #get colony resources
+                for pl in self.view.scans['probes']:
+                    if pl['landed']==True and pl['pos']==self.mission.start_pos:
+                        colony_res=pl['cargo']['resources']
+                        break
+                
+                return {'action':N.Action(N.ACT_LOAD, {'resources':load_res, 'guns':0, 'armor':0}), 'message':message}
+            else:
+                return {'action':N.Action(N.ACT_MOVE, distance(self.view.pos, self.mission.start_pos)), 'message':message}
+        
+        elif self.mission.submission=='to_target':
+            if self.view.sector==self.mission.target_pos:
+                self.mission.submission='to_start'
+                unload_res=[N.CARGO_SLOTS,N.CARGO_SLOTS,N.CARGO_SLOTS]
+                #print "unloading", self.view.cargo['resources']
+                return {'action':N.Action(N.ACT_UNLOAD, {'resources':unload_res, 'guns':0, 'armor':0}), 'message':message}
+            else:
+                return {'action':N.Action(N.ACT_MOVE, distance(self.view.pos, self.mission.target_pos)), 'message':message}
+
+
+        print "error transporter has no mission"
+        while 1:
+            pass
+        return {'action':N.Action(N.ACT_IDLE), 'message':message}
+
     def act_scout(self):
         message=Message()
         message.sender_id=self.int_id
@@ -548,6 +680,8 @@ class ProbeAi(object):
             return self.act_colonizer()
         elif self.typ==TYP_COLONY:
             return self.act_colony()
+        elif self.typ==TYP_TRANSPORTER:
+            return self.act_transporter()
 
     def death_message(self, view):
         message=Message()
