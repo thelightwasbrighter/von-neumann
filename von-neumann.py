@@ -8,7 +8,6 @@ from time import strftime, gmtime
 import importlib
 import copy
 import pygame, pygame.locals
-import pickle
 import gzip
 
 sys.path.reverse()
@@ -29,7 +28,7 @@ ARMOR_SLOTS = 2000
 PROBE_SCAN_RANGE = 5
 PROBE_ATTACK_RANGE = 1
 MAX_SPEED=0.7
-MAX_ROUNDS = 1500
+MAX_ROUNDS = 1300
 PROBE_POINTS = 1
 PLANET_POINTS=20
 DEFAULT_TOURNAMENT_GAMES = 10
@@ -37,7 +36,7 @@ DEBUG_AI=True
 MAXIMUM_STATION_GUNS = 4
 MAXIMUM_STATION_ARMOR = 8
 LIVE_STATS=False
-VIDEO_MAX_FPS=60
+VIDEO_MAX_FPS=150
 VIDEO_MIN_FPS=0.5
 
 #team colours
@@ -401,7 +400,7 @@ class Snapshot(object):
 
 
 class Recording(object):
-    def __init__(self, time, team_list, universe_size):
+    def __init__(self, time=None, team_list=None, universe_size=[None,None]):
         self.time=time
         self.team_list=team_list
         self.UNI_WIDTH=universe_size[0]
@@ -415,8 +414,94 @@ class Recording(object):
 
 def dump_recording(filename, recording):
     f=gzip.open(filename, 'w')
-    pickle.dump(recording,f)
+    f.write("time:"+str(recording.time)+"\n")
+    f.write("teams:"+str(recording.team_list)+"\n")
+    f.write("UNI_WIDTH:"+str(recording.UNI_WIDTH)+"\n")
+    f.write("UNI_HEIGHT:"+str(recording.UNI_HEIGHT)+"\n")
+    f.write("winner:"+str(recording.winner)+"\n")
+    for s in recording.snapshot_list:
+        f.write("["+str(s.round_count)+"]\n")
+        f.write("Planets:"+str(s.planet_list)+"\n")
+        f.write("Probes:"+str(s.probe_list)+"\n")
     f.close()
+
+def extract_recording(video_file):
+    f=gzip.open(video_file, 'r')
+    recording=Recording()
+    recording.team_list=[]
+    recording.snapshot_list=[]
+    #get game parameters
+    line=f.readline()
+    i=line.find(":")
+    recording.time=line[i:]
+    line=f.readline()
+    i=line.find("[[")
+    j=line.find("]]")
+    subline=line[i+1:j+1]
+    while subline.find("[")!=-1:
+        i=subline.find("[")
+        j=subline.find(",")
+        id=int(subline[i+1:j])
+        i=subline.find("'")
+        j=subline.find("']")
+        name=subline[i+1:j]
+        recording.team_list.append([id,name])
+        subline=subline[j+3:]
+    line=f.readline()
+    i=line.find(":")
+    recording.UNI_WIDTH=int(line[i+1:])
+    line=f.readline()
+    i=line.find(":")
+    recording.UNI_HEIGHT=int(line[i+1:])
+    line=f.readline()
+    i=line.find(":")
+    recording.winner=line[i+1:]
+    line=f.readline()
+    while line!="": #for each round
+        planet_list=[]
+        probe_list=[]
+        round_count=int(line[line.find("[")+1:line.find("]")])
+        line=f.readline()
+        subline=line[line.find(":")+1:]
+        while subline.find("[")!=-1: #for each planet
+            while subline[0]=="[": #remove leading brackets except for one
+                subline=subline[1:]
+            i=subline.find(",")
+            j=subline.find("]")
+            x_coord=int(subline[:i])
+            y_coord=int(subline[i+2:j])
+            subline=subline[j+3:]
+            i=subline.find(",")
+            if subline[:i]=="True":
+                subline=subline[i+2:]
+                j=subline.find("]")
+                id=int(subline[:j])
+                subline=subline[j+3:]
+                planet_list.append([[x_coord,y_coord],True,id])
+            else:
+                j=subline.find("]")
+                subline=subline[j+3:]
+                planet_list.append([[x_coord,y_coord],False])
+        
+        line=f.readline()
+        subline=line[line.find(":")+1:]
+        while subline.find("[")!=-1: #for each probe
+            while subline[0]=="[": #remove leading brackets except for one
+                subline=subline[1:]
+            i=subline.find(",")
+            j=subline.find("]")
+            x_coord=int(subline[:i])
+            y_coord=int(subline[i+2:j])
+            subline=subline[j+3:]
+            i=subline.find("]")
+            id=int(subline[:i])
+            subline=subline[i+3:]
+            probe_list.append([[x_coord,y_coord],id])
+        recording.snapshot_list.append(Snapshot(probe_list,planet_list,round_count))
+        line=f.readline()
+    f.close
+    return recording
+
 
 class VideoPlayer(object):
     def __init__(self, video_file, fps):
@@ -424,9 +509,8 @@ class VideoPlayer(object):
         self.interval=1.0/fps
         self.max_interval=1.0/VIDEO_MIN_FPS
         self.min_interval=1.0/VIDEO_MAX_FPS
-        f=gzip.open(self.video_file, 'r')
-        self.recording=pickle.load(f)
-        f.close
+        self.recording=extract_recording(self.video_file)
+
         #generate display
         self.mydisplay = Display(self.recording.UNI_WIDTH, self.recording.UNI_HEIGHT, SCALE, True)
     def play(self):
