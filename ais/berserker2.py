@@ -131,7 +131,7 @@ class ProbeAi(object):
                 for probe in view.scans['probes']:
                     if abs(probe['sector'][0]-view.sector[0])<=1 and abs(probe['sector'][1]-view.sector[1])<=1:
                         if probe['team_id']!=view.team_id:
-                            #print "DEFEND!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                            print "DEFEND!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                             return {'action':von_neumann.Action(von_neumann.ACT_ATTACK, probe['probe_id']), 'message':message}
             
 	    if view.cargo['guns']<NUM_GUNS+STATION_GUNS:
@@ -228,5 +228,3 @@ class ProbeAi(object):
         else:
             print "Warning, no mission!"
         
-    def death_message(self, view):
-        return None
